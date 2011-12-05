@@ -624,4 +624,8 @@
 		</profile>
 	</profiles>
 
+	<scm>
+		<url>git@github.com:benjamin-adrian/scoobie.git</url>
+		<developerConnection>Benjamin Adrian</developerConnection>
+	</scm>
 </project>
