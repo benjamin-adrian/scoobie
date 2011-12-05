@@ -74,19 +74,19 @@ public class RDFTripleParser {
 
 	final Object SEMAPHOR = new Object();
 
-	private static InputStream getStream(String file, MediaType mediatype)
+	private static InputStream getStream(InputStream stream, MediaType mediatype)
 			throws Exception {
 
 		switch (mediatype) {
 		case BZIP:
-			return new BZip2CompressorInputStream(new FileInputStream(file));
+			return new BZip2CompressorInputStream(stream);
 		case GZIP:
-			return new GzipCompressorInputStream(new FileInputStream(file));
+			return new GzipCompressorInputStream(stream);
 		case ZIP:
-			return new ZipArchiveInputStream(new FileInputStream(file));
+			return new ZipArchiveInputStream(stream);
 
 		default:
-			return new FileInputStream(file);
+			return stream;
 
 		}
 	}
@@ -121,19 +121,19 @@ public class RDFTripleParser {
 	 * @return
 	 * @throws Exception
 	 */
-	public TripleStats parseTriples(final String[] input,
-			final MediaType rdf_mimetype, final String sessionPath,
+	public TripleStats parseTriples(final InputStream[] input,
+			final MediaType rdf_mimetype, final File sessionPath,
 			final String absoluteBaseURI, final MediaType file_mimetype)
 			throws Exception {
 
 		final TripleStats stats = new TripleStats();
 		int count = 0;
 
-		new File(sessionPath + "/dump/").mkdirs();
+		new File(sessionPath.getAbsolutePath() + "/dump/").mkdirs();
 
-		stats.datatypeProps = new File(sessionPath
+		stats.datatypeProps = new File(sessionPath.getAbsolutePath()
 				+ "/dump/datatypeProperties.lst");
-		stats.objectProps = new File(sessionPath + "/dump/objectProperties.lst");
+		stats.objectProps = new File(sessionPath.getAbsolutePath() + "/dump/objectProperties.lst");
 
 		stats.datatypeProps.setReadable(true, false);
 		stats.objectProps.setReadable(true, false);
@@ -157,10 +157,13 @@ public class RDFTripleParser {
 
 		final ArrayList<Callable<Boolean>> threads = new ArrayList<Callable<Boolean>>();
 
-		for (final String path : input) {
+		
+		int sourceCount = 0;
+		
+		for (final InputStream stream : input) {
 
-			log.info("Parsing: " + path + " ( " + (++count) + " from "
-					+ input.length + " )");
+			final String source = (++sourceCount)+"";
+			log.info("Parsing: " + source + " from ( "+ input.length + " )");
 
 			final RDFParser parser = getParser(rdf_mimetype);
 			parser.setRDFHandler(new RDFHandler() {
@@ -180,7 +183,7 @@ public class RDFTripleParser {
 						tripleCount++;
 
 						if (tripleCount % 10000 == 0) {
-							log.info(path + ": Parsed " + tripleCount
+							log.info(source + ": Parsed " + tripleCount
 									+ " RDF triples");
 						}
 						// get triple components
@@ -227,7 +230,7 @@ public class RDFTripleParser {
 						}
 
 					} catch (Exception e) {
-						log.log(Level.SEVERE, "Error in parsing: " + path, e);
+						log.log(Level.SEVERE, "Error in parsing: " + source, e);
 					}
 
 				}
@@ -334,20 +337,20 @@ public class RDFTripleParser {
 				@Override
 				public Boolean call() throws Exception {
 
-					InputStream stream = getStream(path, file_mimetype);
+					InputStream unpackedStream = getStream(stream, file_mimetype);
 					try {
 						if (absoluteBaseURI != null)
-							parser.parse(stream, absoluteBaseURI);
+							parser.parse(unpackedStream, absoluteBaseURI);
 						else
-							parser.parse(stream, BASEURI);
+							parser.parse(unpackedStream, BASEURI);
 					} catch (Exception e) {
-						new Exception("Error during parsing " + path
+						new Exception("Error during parsing " + source
 								+ " with mimetype " + file_mimetype, e)
 								.printStackTrace();
-						stream.close();
+						unpackedStream.close();
 						return false;
 					}
-					stream.close();
+					unpackedStream.close();
 
 					return true;
 				}

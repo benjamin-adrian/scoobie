@@ -25,12 +25,15 @@
 package de.dfki.km.perspecting.obie.connection;
 
 import java.io.File;
+import java.io.InputStream;
 import java.net.URI;
 import java.sql.Connection;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 /**
  * an ontology and its instance base. It provides methods for querying
@@ -258,14 +261,7 @@ public interface KnowledgeBase {
 	URI getUri();
 	
 	
-	/**
-	 * @param file
-	 * @param table
-	 * @param session
-	 * @param conn
-	 * @throws Exception
-	 */
-	void uploadBulk(File file, String table, String session, Connection conn) throws Exception;
-
-
+	void preprocessRdfData(InputStream[] datasets, MediaType rdfMimeType, MediaType fileMimeType, String absoluteBaseURI) throws Exception;
+	
+	
 }

@@ -21,7 +21,7 @@
     along with SCOOBIE.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.dfki.km.perspecting.obie.transducer.model;
+package de.dfki.km.perspecting.obie.preprocessor;
 
 import gnu.trove.TIntDoubleHashMap;
 

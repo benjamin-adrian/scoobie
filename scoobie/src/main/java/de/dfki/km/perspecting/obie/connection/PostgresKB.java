@@ -26,7 +26,10 @@ package de.dfki.km.perspecting.obie.connection;
 import gnu.trove.TIntHashSet;
 import gnu.trove.TIntIntHashMap;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -40,10 +43,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.openrdf.model.vocabulary.RDF;
+
+import de.dfki.km.perspecting.obie.connection.RDFTripleParser.TripleStats;
+import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 public class PostgresKB implements KnowledgeBase {
 
@@ -848,8 +857,7 @@ public class PostgresKB implements KnowledgeBase {
 			return 0;
 	}
 
-	@Override
-	public void uploadBulk(File file, String table, String session,
+	private void uploadBulk(File file, String table, String session,
 			Connection conn) throws Exception {
 
 		final Statement bulkImport = conn.createStatement();
@@ -863,6 +871,274 @@ public class PostgresKB implements KnowledgeBase {
 		bulkImport.close();
 		log.info("Committed bulk import of " + filename + " #entries: " + size);
 
+	}
+	
+	@Override
+	public void preprocessRdfData(InputStream[] datasets, MediaType rdfMimeType, MediaType fileMimeType, String absoluteBaseURI)
+			throws Exception {
+		this.connection.setAutoCommit(false);
+		createDatabase();
+		loadRDFData(datasets, rdfMimeType, absoluteBaseURI, fileMimeType);
+		connection.commit();
+		createIndexes();
+		connection.commit();
+		connection.close();
+	}
+	
+
+
+	private void createIndexes() throws Exception {
+
+		try {
+			Statement s = connection.createStatement();
+						
+			InputStream in = PostgresKB.class.getResourceAsStream("indexscheme.sql");
+			BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+			
+			StringBuilder builder = new StringBuilder();
+			for(String line = reader.readLine(); line != null; line = reader.readLine()) {
+				builder.append(line);
+				builder.append("\n");
+			}
+			reader.close();
+			in.close();
+			String sqlBatch = builder.toString();
+			for (String sql : sqlBatch.split(";\n")) {
+				s.addBatch(sql);
+			}
+			s.executeBatch();
+			s.close();
+			log.info("Created indexes: " + connection.getCatalog());
+		} catch (SQLException e) {
+			log.log(Level.SEVERE, PostgresKB.class.getName(), e);
+			throw new Exception(e);
+		}
+	}
+	
+	private void createDatabase() throws Exception {
+
+		try {
+			Statement s = connection.createStatement();
+						
+			InputStream in = PostgresKB.class.getResourceAsStream("dbscheme.sql");
+			BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+			
+			StringBuilder builder = new StringBuilder();
+			for(String line = reader.readLine(); line != null; line = reader.readLine()) {
+				builder.append(line);
+				builder.append("\n");
+			}
+			reader.close();
+			in.close();
+			String sqlBatch = builder.toString();
+			for (String sql : sqlBatch.split(";\n")) {
+				s.addBatch(sql);
+			}
+			s.executeBatch();
+			s.close();
+			connection.commit();
+			log.info("Created scheme: " + connection.getCatalog());
+		} catch (SQLException e) {
+			log.log(Level.SEVERE, PostgresKB.class.getName(), e);
+			throw new Exception(e);
+		}
+	}
+	
+	private void loadRDFData(InputStream[] instanceBases,
+			MediaType rdfMimeType, String absoluteBaseURI, MediaType fileMimeType)
+			throws Exception {
+		final ExecutorService pool = Executors.newCachedThreadPool();
+		
+		
+		log.info("Parsing RDF dump files: ... ");
+		long start = System.currentTimeMillis();
+		RDFTripleParser parser = new RDFTripleParser();
+
+		File.createTempFile(session, "").mkdir();
+		
+		final TripleStats tripleStats = parser.parseTriples(instanceBases,
+				rdfMimeType, File.createTempFile(session, ""), absoluteBaseURI, fileMimeType);
+		log.info("[done] took " + (System.currentTimeMillis() - start) + "ms");
+
+		Future<?> f1 = pool.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					uploadBulk(tripleStats.objectProps, "TMP_RELATIONS", session, connection);
+				} catch (Exception e) {
+					log.log(Level.SEVERE, PostgresKB.class.getName(), e);
+				}
+			}
+		});
+		
+		Future<?> f2 = pool.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					uploadBulk(tripleStats.datatypeProps, "TMP_SYMBOLS", session, connection);
+				} catch (Exception e) {
+					log.log(Level.SEVERE, PostgresKB.class.getName(), e);
+				}
+			}
+		});
+		
+		f1.get();
+		f2.get();
+		
+		Future<?> f3 = pool.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					storeResourceIndex();
+				} catch (Exception e) {
+					log.log(Level.SEVERE, PostgresKB.class.getName(), e);
+				}
+			}
+		});
+		
+		Future<?> f4 = pool.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					storeLiteralValues();
+				} catch (Exception e) {
+					log.log(Level.SEVERE, PostgresKB.class.getName(), e);
+				}
+			}
+		});
+		
+		f3.get();
+		f4.get();
+		
+		Future<?> f5 = pool.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					initDatatypePropertyValues();
+				} catch (Exception e) {
+					log.log(Level.SEVERE, PostgresKB.class.getName(), e);
+				}
+			}
+		});
+		
+		Future<?> f6 = pool.submit(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					initObjectPropertyValues();
+				} catch (Exception e) {
+					log.log(Level.SEVERE, PostgresKB.class.getName(), e);
+				}
+			}
+		});
+		
+		f5.get();
+		f6.get();
+		
+		dropTMP();
+
+	}
+
+
+
+	private void storeResourceIndex() throws Exception {
+
+		log.info("Populating table: index_resources");
+		int subjects = connection.prepareStatement(
+				"INSERT INTO tmp_index_resources (uri) "
+						+ "SELECT DISTINCT s FROM tmp_relations").executeUpdate();
+
+		log.info("Added " + subjects + " subjects to table: index_resources");
+
+		subjects += connection.prepareStatement(
+				"INSERT INTO tmp_index_resources (uri) "
+						+ "SELECT DISTINCT p FROM tmp_relations").executeUpdate();
+		log.info("Added " + subjects
+				+ " predicates to index_resources");
+
+		subjects += connection.prepareStatement(
+				"INSERT INTO tmp_index_resources (uri) "
+						+ "SELECT DISTINCT o FROM tmp_relations").executeUpdate();
+		log.info("Added " + subjects + " objects to index_resources");
+
+		subjects += connection.prepareStatement(
+				"INSERT INTO tmp_index_resources (uri) "
+						+ "SELECT DISTINCT p FROM tmp_symbols").executeUpdate();
+		log.info("Added " + subjects
+				+ " datatype predicates to index_resources");
+		subjects += connection.prepareStatement(
+				"INSERT INTO tmp_index_resources (uri) "
+						+ "SELECT DISTINCT s FROM tmp_symbols").executeUpdate();
+
+		log.info("Added " + subjects
+				+ " datatype subjects to tmp_index_resources");
+
+		subjects += connection.prepareStatement(
+				"INSERT INTO index_resources (uri) "
+						+ "SELECT DISTINCT uri FROM tmp_index_resources")
+				.executeUpdate();
+
+		log.info("Added " + subjects
+				+ " datatype subjects to index_resources");
+
+
+		log.info("Dropping tmp_index_resources");
+		connection.prepareStatement("DROP TABLE tmp_index_resources").execute();
+		
+		log.info("Finished population query for index_resources");
+		log.info("Committed population of index_resources");
+		log.info(" ... stored " + subjects + " resources.");
+
+	}
+
+	private void dropTMP() throws SQLException {
+		log.info("Dropping tmp_relations");
+		connection.prepareStatement("DROP TABLE tmp_relations").execute();
+		log.info("Dropping tmp_symbols");
+		connection.prepareStatement("DROP TABLE tmp_symbols").execute();
+		log.info("Committed dropping");
+	}
+
+	private void storeLiteralValues() throws SQLException {
+		final PreparedStatement cleanInsert = connection
+		.prepareStatement("INSERT INTO index_literals (literal, prefix) " +
+				"SELECT DISTINCT o as literal, h as prefix FROM tmp_symbols");
+		log.info("Populating index_literals");
+		int i = cleanInsert.executeUpdate();
+		cleanInsert.close();
+
+		log.info("Finished population query for index_literals");
+		log.info("Committed population of index_literals");
+		log.info(" ... stored " + i + " literals.");
+
+	}
+
+	private void initObjectPropertyValues() throws Exception {
+
+		final PreparedStatement stmt = connection
+				.prepareStatement("INSERT INTO relations "
+						+ " (subject, predicate, object) "
+						+ "SELECT A.index AS subject, B.index AS predicate, C.index AS object " +
+								"FROM index_resources A, index_resources B, index_resources C, tmp_relations D " +
+								"WHERE(A.uri = D.s AND B.uri = D.p AND C.uri = D.o) ");
+
+		int updateCount = stmt.executeUpdate();
+		log.info("Added " + updateCount
+				+ " triples with object properties");
+	}
+
+	private void initDatatypePropertyValues() throws Exception {
+		final PreparedStatement stmt = connection
+				.prepareStatement("INSERT INTO symbols "
+						+ "(subject, predicate, object, belief) "
+						+ "SELECT DISTINCT A.index AS subject, B.index AS predicate, C.index AS object, 1.0 AS belief "
+						+ "FROM index_resources A, index_resources B, index_literals C, tmp_symbols D "
+						+ "WHERE (A.uri = D.s AND B.uri = D.p AND C.literal = D.o) ");
+
+		int updateCount = stmt.executeUpdate();
+
+		log.info("Added " + updateCount
+				+ " triples with datatype properties");
 	}
 
 }

@@ -25,7 +25,7 @@ package de.dfki.km.perspecting.obie.transducer;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.model.Document;
-import de.dfki.km.perspecting.obie.transducer.model.RegexEntityRecognitionModel;
+import de.dfki.km.perspecting.obie.preprocessor.RegexEntityRecognitionModel;
 import de.dfki.km.perspecting.obie.workflow.Transducer;
 
 public class RegularStructuredEntityRecognition extends Transducer {
