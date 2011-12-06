@@ -56,8 +56,8 @@ public enum MediaType {
 	RDF_BINARY("application/x-binary-rdf-results-table"),
 	BZIP("application/bzip2"),
 	GZIP("application/gzip"),
-	ZIP("application/zip");
-	
+	ZIP("application/zip"),
+	DIRECTORY("inode/directory");
 	
 	private String value;
 	

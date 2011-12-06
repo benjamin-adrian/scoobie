@@ -27,15 +27,27 @@ import gnu.trove.TIntHashSet;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.logging.Logger;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.lucene.analysis.WhitespaceAnalyzer;
@@ -66,7 +78,9 @@ public class TextCorpus {
 	 */
 	protected File corpus;
 
-	protected MediaType mediatype;
+	protected ArrayList<InputStream> files = new ArrayList<InputStream>();
+	
+	protected MediaType corpusMediaType;
 
 	protected Language language;
 
@@ -74,32 +88,34 @@ public class TextCorpus {
 
 	protected final Logger log = Logger.getLogger(TextCorpus.class.getName());
 
+	private MediaType corpusFileMediaType;
+
 	/**
 	 * Creates a new TextCorpus.
 	 * 
-	 * @param corpusDir
+	 * @param corpusFile
 	 *            directory to contain text documents
 	 * @param indexDir
 	 *            directory to contain the lucene index
+	 * @throws Exception 
 	 */
-	public TextCorpus(File corpusDir, MediaType mediatype, Language language) {
-		this.corpus = corpusDir;
-		this.mediatype = mediatype;
+	public TextCorpus(File corpusFile, MediaType corpusFileMediaType, MediaType corpusMediaType, Language language) throws Exception {
+		this.corpus = corpusFile;
+		this.corpusFileMediaType = corpusFileMediaType;
+		this.corpusMediaType = corpusMediaType;
 		this.language = language;
+		log.info("creating corpus on " + corpusFile.getAbsolutePath());
 	}
-
 
 	@SuppressWarnings("unchecked")
-	public List<?> forEach(DocumentProcedure<?> p) throws Exception {
-		return forEach(p, corpus);
-	}
-	
-	public List<?> forEach(DocumentProcedure<?> p, File directory) throws Exception {
+	public List<?> forEach(DocumentProcedure<?> p)
+			throws Exception {
+		@SuppressWarnings("rawtypes")
 		List l = new ArrayList();
-		for (File f : getFiles(directory)) {
-			log.info("processing file: " + f.getName());
-			FileReader reader = new FileReader(f);
-			l.add(p.process(reader, f.toURI()));
+		for (Entry<URI, InputStream> in : getEntries().entrySet()) {
+			InputStreamReader reader = new InputStreamReader(in.getValue());
+			log.info("processing entry: " + in.getKey().toString());
+			l.add(p.process(reader, in.getKey()));
 			reader.close();
 		}
 		return l;
@@ -108,13 +124,16 @@ public class TextCorpus {
 	/**
 	 * Returns a Lucene index on this {@link TextCorpus}.
 	 * 
-	 * @param dir The directory the index is stored.
-	 * @param reindex If <code>true</code>, an existing index will be re-created.
+	 * @param dir
+	 *            The directory the index is stored.
+	 * @param reindex
+	 *            If <code>true</code>, an existing index will be re-created.
 	 * @return Access to the Lucene index.
 	 * 
 	 * @throws Exception
 	 */
-	public IndexSearcher getLuceneIndex(File dir, boolean reindex) throws Exception {
+	public IndexSearcher getLuceneIndex(File dir, boolean reindex)
+			throws Exception {
 
 		if (dir.exists()) {
 			if (reindex) {
@@ -123,13 +142,13 @@ public class TextCorpus {
 			} else {
 				return new IndexSearcher(dir.getAbsolutePath());
 			}
-		} 
-		
+		}
+
 		dir.mkdirs();
 		log.info("created directory: " + dir);
 
 		final WhitespaceAnalyzer analyser = new WhitespaceAnalyzer();
-		
+
 		final IndexWriter indexWriter = new IndexWriter(dir, analyser, true,
 				MaxFieldLength.LIMITED);
 		forEach(new DocumentProcedure<String>() {
@@ -160,7 +179,7 @@ public class TextCorpus {
 			public String process(Reader doc, URI uri) throws Exception {
 
 				Document document = pipeline.createDocument(doc, uri,
-						mediatype, template, language);
+						corpusMediaType, template, language);
 
 				for (int step = 0; pipeline.hasNext(step); step = pipeline
 						.execute(step, document))
@@ -214,22 +233,41 @@ public class TextCorpus {
 
 		});
 		writer.close();
-		return new LabeledTextCorpus(corpus, this);
+		return new LabeledTextCorpus(corpus, MediaType.TEXT, this);
 
 	}
 
 	/**
 	 * @return list of files in corpus
+	 * @throws IOException 
+	 * @throws ZipException 
 	 */
 	@SuppressWarnings("unchecked")
-	protected Collection<File> getFiles(File corpus) {
+	protected HashMap<URI, InputStream> getEntries() throws Exception {
 
-		if (corpus.isDirectory()) {
-			Collection<File> files = FileUtils.listFiles(corpus, null, false);
-			return files;
-		} else {
-			return Arrays.asList(new File[] { corpus });
+		HashMap<URI, InputStream> entries = new HashMap<URI, InputStream>();
+		
+		if(corpusFileMediaType == MediaType.ZIP) {
+			ZipFile zippedCorpusDir = new ZipFile(corpus);
+			Enumeration<? extends ZipEntry> zipEntries = zippedCorpusDir.entries();
+			while(zipEntries.hasMoreElements()) {
+				ZipEntry zipEntry = zipEntries.nextElement();
+				if(!zipEntry.isDirectory()) {
+					
+					String uriValue = corpus.toURI().toString()+"/";
+					String entryName = zipEntry.getName();
+					uriValue += URLEncoder.encode(entryName, "utf-8");
+	
+					entries.put(new URI(uriValue), zippedCorpusDir.getInputStream(zipEntry));
+				}
+			}
+		} else if(corpusFileMediaType == MediaType.DIRECTORY) {
+			for(File f : corpus.listFiles()) {
+				entries.put(f.toURI(), new FileInputStream(f));
+			}
 		}
+		
+		return entries;
 	}
 
 	public File getCorpus() {
@@ -241,7 +279,11 @@ public class TextCorpus {
 	}
 
 	public MediaType getMediatype() {
-		return mediatype;
+		return corpusMediaType;
+	}
+	
+	public MediaType getCorpusFileMediaType() {
+		return corpusFileMediaType;
 	}
 
 }

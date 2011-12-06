@@ -19,7 +19,7 @@
 
     You should have received a copy of the GNU General Public License
     along with SCOOBIE.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 package de.dfki.km.perspecting.obie.corpus;
 
@@ -29,10 +29,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -41,9 +44,12 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
+import org.apache.commons.io.FileUtils;
 
 import de.dfki.km.perspecting.obie.model.DocumentProcedure;
-import de.dfki.km.perspecting.obie.vocabulary.Language;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 /**
@@ -119,39 +125,45 @@ public class LabeledTextCorpus extends TextCorpus {
 	private final static Pattern DATE = Pattern
 			.compile("[0-9]+[\\p{Punct}[0-9]+]+");
 
-	private TextCorpus textCorpus;
+	private File labelFolder;
+	private MediaType labelFileMediaType;
 
-	public LabeledTextCorpus(File folder, TextCorpus corpus) {
-		super(folder, corpus.mediatype, corpus.language);
-		this.textCorpus = corpus;
-	}
-
-	public LabeledTextCorpus(File folder, MediaType mediatype, Language language) {
-		super(folder, mediatype, language);
-	}
-
-	public TextCorpus getTextCorpus() {
-		return textCorpus;
+	public LabeledTextCorpus(File labelFolder, MediaType labelFileMediaType,
+			TextCorpus corpus) throws Exception {
+		super(corpus.getCorpus(), corpus.getCorpusFileMediaType(),
+				corpus.corpusMediaType, corpus.language);
+		this.labelFolder = labelFolder;
+		this.labelFileMediaType = labelFileMediaType;
 	}
 
 	public Reader getGroundTruth(final URI uri) throws Exception {
-		final StringBuilder builder = new StringBuilder();
-		this.forEach(new DocumentProcedure<String>() {
-			@Override
-			public String process(Reader doc, URI _uri) throws Exception {
-				if (uri.equals(_uri)) {
+		if (labelFileMediaType == MediaType.DIRECTORY) {
+			return new StringReader(FileUtils.readFileToString(new File(uri)));
+		} else if (labelFileMediaType == MediaType.ZIP) {
+			ZipFile zipFile = new ZipFile(labelFolder);
+			String[] entryName = uri.toURL().getFile().split("/");
+			ZipEntry entry = zipFile.getEntry(URLDecoder.decode(
+					entryName[entryName.length - 1], "utf-8"));
 
-					BufferedReader r = new BufferedReader(doc);
-					for (String line = r.readLine(); line != null; line = r
-							.readLine()) {
-						builder.append(line);
-						builder.append("\n");
-					}
-				}
-				return null;
+			if (entry != null) {
+				log.info("found labels for: " + uri.toString());
+			} else {
+				throw new Exception("did not found labels for: " + uri.toString());
 			}
-		});
-		return new StringReader(builder.toString());
+			return new InputStreamReader(zipFile.getInputStream(entry));
+		} else {
+			throw new Exception("Unsupported media format for labels: "
+					+ labelFileMediaType + ". "
+					+ "Please use zip or plain directories instead.");
+		}
+	}
+
+	/**
+	 * This method is a hook for inserting a label extraction from different
+	 * label files.
+	 */
+	protected Reader extractLabels(Reader in) throws Exception {
+		return in;
 	}
 
 	public Reader toFeatureFormat(File out, final int[] ngramsize,
@@ -160,8 +172,6 @@ public class LabeledTextCorpus extends TextCorpus {
 			final int windowsize, final String... postags) throws Exception {
 		final BufferedWriter writer = new BufferedWriter(new FileWriter(out));
 
-		
-		
 		this.forEach(new DocumentProcedure<String>() {
 			@Override
 			public String process(Reader doc, URI uri) throws Exception {
@@ -255,8 +265,9 @@ public class LabeledTextCorpus extends TextCorpus {
 	 * @param exampleData
 	 * @throws IOException
 	 */
-	public static void serializeExample(Writer corpusWriter, String exampleLabel,
-			String exampleName, List<String> exampleData) throws IOException {
+	public static void serializeExample(Writer corpusWriter,
+			String exampleLabel, String exampleName, List<String> exampleData)
+			throws IOException {
 		if (!exampleData.isEmpty()) {
 
 			corpusWriter.append(exampleName);
@@ -369,8 +380,8 @@ public class LabeledTextCorpus extends TextCorpus {
 		return returnValues;
 	}
 
-	public static List<String> calculateNgrams(int nGramSize, List<String> sequence,
-			String before) {
+	public static List<String> calculateNgrams(int nGramSize,
+			List<String> sequence, String before) {
 		List<String> text = new ArrayList<String>();
 		int newNOfNGrams = Math.min(sequence.size(), nGramSize);
 		if (newNOfNGrams > 0) {
