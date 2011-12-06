@@ -1,7 +1,6 @@
 /*
     Copyright (c) 2011, 
     Benjamin Adrian <benjamin.horak@gmail.com>
-    German Research Center for Artificial Intelligence (DFKI) <info@dfki.de>
     
     All rights reserved.
 
@@ -21,7 +20,7 @@
     along with SCOOBIE.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.dfki.km.perspecting.obie.model;
+package de.dfki.km.perspecting.obie.experiments;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -39,6 +38,9 @@ import org.junit.Test;
 
 import de.dfki.km.perspecting.obie.corpus.TextCorpus;
 import de.dfki.km.perspecting.obie.corpus.WikinewsCorpus;
+import de.dfki.km.perspecting.obie.model.Document;
+import de.dfki.km.perspecting.obie.model.DocumentProcedure;
+import de.dfki.km.perspecting.obie.model.Scoobie;
 import de.dfki.km.perspecting.obie.postprocessor.ListSerializer;
 import de.dfki.km.perspecting.obie.vocabulary.Language;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;

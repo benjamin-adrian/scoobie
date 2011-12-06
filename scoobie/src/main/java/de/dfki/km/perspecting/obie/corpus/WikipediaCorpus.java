@@ -19,7 +19,7 @@
 
     You should have received a copy of the GNU General Public License
     along with SCOOBIE.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 package de.dfki.km.perspecting.obie.corpus;
 
@@ -34,13 +34,21 @@ import org.openrdf.repository.sail.SailRepositoryConnection;
 import org.openrdf.rio.RDFFormat;
 import org.openrdf.sail.memory.MemoryStore;
 
+import de.dfki.km.perspecting.obie.vocabulary.Language;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 public class WikipediaCorpus extends LabeledTextCorpus {
-	
 
-	public WikipediaCorpus(File labelFolder, TextCorpus corpus) throws Exception {
+	public WikipediaCorpus(File labelFolder, TextCorpus corpus)
+			throws Exception {
 		super(labelFolder, MediaType.ZIP, corpus);
+	}
+
+	public WikipediaCorpus() throws Exception {
+		this(new File("../corpora/wikipedia/wikipedia_labels.zip"),
+				new TextCorpus(new File(
+						"../corpora/wikipedia/wikipedia_text.zip"),
+						MediaType.ZIP, MediaType.TEXT, Language.EN));
 	}
 
 	@Override
@@ -60,5 +68,5 @@ public class WikipediaCorpus extends LabeledTextCorpus {
 		}
 		return new StringReader(b.toString());
 	}
-	
+
 }

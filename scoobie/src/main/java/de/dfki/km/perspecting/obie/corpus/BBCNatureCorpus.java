@@ -19,7 +19,7 @@
 
     You should have received a copy of the GNU General Public License
     along with SCOOBIE.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 package de.dfki.km.perspecting.obie.corpus;
 
@@ -41,16 +41,23 @@ import org.openrdf.repository.sail.SailRepositoryConnection;
 import org.openrdf.rio.RDFFormat;
 import org.openrdf.sail.memory.MemoryStore;
 
+import de.dfki.km.perspecting.obie.vocabulary.Language;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
-
 
 public class BBCNatureCorpus extends LabeledTextCorpus {
 
-	public BBCNatureCorpus(File labelFolder, TextCorpus corpus) throws Exception {
+	public BBCNatureCorpus(File labelFolder, TextCorpus corpus)
+			throws Exception {
 		super(labelFolder, MediaType.ZIP, corpus);
 	}
 
-	
+	public BBCNatureCorpus() throws Exception {
+		this(new File("../corpora/bbc_nature/bbc_nature_labels.zip"),
+				new TextCorpus(new File(
+						"../corpora/bbc_nature/bbc_nature_text.zip"),
+						MediaType.ZIP, MediaType.HTML, Language.EN));
+	}
+
 	public Reader getGroundTruth(final URI uri) throws Exception {
 		if (labelFileMediaType == MediaType.DIRECTORY) {
 			return new StringReader(FileUtils.readFileToString(new File(uri)));
@@ -58,12 +65,14 @@ public class BBCNatureCorpus extends LabeledTextCorpus {
 			ZipFile zipFile = new ZipFile(labelFolder);
 			String[] entryName = uri.toURL().getFile().split("/");
 			ZipEntry entry = zipFile.getEntry(URLDecoder.decode(
-					entryName[entryName.length - 1], "utf-8").replace("text", "rdf"));
+					entryName[entryName.length - 1], "utf-8").replace("text",
+					"rdf"));
 
 			if (entry != null) {
 				log.info("found labels for: " + uri.toString());
 			} else {
-				throw new Exception("did not found labels for: " + uri.toString());
+				throw new Exception("did not found labels for: "
+						+ uri.toString());
 			}
 			return new InputStreamReader(zipFile.getInputStream(entry));
 		} else {
@@ -78,8 +87,7 @@ public class BBCNatureCorpus extends LabeledTextCorpus {
 	 * label files.
 	 */
 	protected Reader extractLabels(Reader in) throws Exception {
-		
-		
+
 		SailRepository sr = new SailRepository(new MemoryStore());
 		SailRepositoryConnection conn;
 		sr.initialize();

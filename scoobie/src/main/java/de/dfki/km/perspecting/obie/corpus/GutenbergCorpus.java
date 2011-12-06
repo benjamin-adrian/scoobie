@@ -19,7 +19,7 @@
 
     You should have received a copy of the GNU General Public License
     along with SCOOBIE.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 
 package de.dfki.km.perspecting.obie.corpus;
 
@@ -30,30 +30,38 @@ import java.io.StringReader;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
+import de.dfki.km.perspecting.obie.vocabulary.Language;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 public class GutenbergCorpus extends LabeledTextCorpus {
-	
-	private final static Pattern p = Pattern.compile("(\"http://dbpedia.org/\\w+/\\w+\")", Pattern.CASE_INSENSITIVE);
 
-	
-	public GutenbergCorpus(File labelFolder, TextCorpus corpus) throws Exception {
+	private final static Pattern p = Pattern.compile(
+			"(\"http://dbpedia.org/\\w+/\\w+\")", Pattern.CASE_INSENSITIVE);
+
+	public GutenbergCorpus(File labelFolder, TextCorpus corpus)
+			throws Exception {
 		super(labelFolder, MediaType.ZIP, corpus);
 	}
-	
-	
+
+	public GutenbergCorpus() throws Exception {
+		this(new File("../corpora/gutenberg/gutenberg_text_labels.zip"),
+				new TextCorpus(new File(
+						"../corpora/gutenberg/gutenberg_text_labels.zip"),
+						MediaType.ZIP, MediaType.HTML, Language.EN));
+	}
+
 	@Override
 	public Reader extractLabels(Reader in) throws Exception {
 
 		BufferedReader br = new BufferedReader(in);
-		
+
 		final StringBuffer b = new StringBuffer();
 
-		for(String line = br.readLine(); line != null; line = br.readLine()) {
+		for (String line = br.readLine(); line != null; line = br.readLine()) {
 			Matcher m = p.matcher(line);
 			while (m.find()) {
-				b.append(m.group().replaceAll("/page/", "/resource/").replaceAll("\"", ""));
+				b.append(m.group().replaceAll("/page/", "/resource/")
+						.replaceAll("\"", ""));
 				b.append("\n");
 			}
 		}
