@@ -956,8 +956,10 @@ public class PostgresKB implements KnowledgeBase {
 
 		File.createTempFile(session, "").mkdir();
 		
+		
+		
 		final TripleStats tripleStats = parser.parseTriples(instanceBases,
-				rdfMimeType, File.createTempFile(session, ""), absoluteBaseURI, fileMimeType);
+				rdfMimeType, new File(System.getProperty("java.io.tmpdir")), absoluteBaseURI, fileMimeType);
 		log.info("[done] took " + (System.currentTimeMillis() - start) + "ms");
 
 		Future<?> f1 = pool.submit(new Runnable() {

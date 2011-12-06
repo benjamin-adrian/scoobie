@@ -32,6 +32,7 @@ import java.net.URI;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import de.dfki.km.perspecting.obie.corpus.TextCorpus;
 import de.dfki.km.perspecting.obie.corpus.WikinewsCorpus;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.Scoobie;
@@ -66,8 +67,14 @@ public class TestRDFaSerializer {
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		try {
-			final File wikinewsFolder = new File($CORPUS_HOME + "en/wikinews/");
-			final WikinewsCorpus corpus = new WikinewsCorpus(wikinewsFolder);
+			
+			final WikinewsCorpus corpus = new WikinewsCorpus(
+					new File(
+							"../corpora/wikinews/wikinews_text_labels.zip"),
+					new TextCorpus(
+							new File(
+									"../corpora/wikinews/wikinews_text_labels.zip"),
+							MediaType.ZIP, MediaType.HTML, Language.EN));
 
 			$ = new Scoobie($DATABASE_DBPEDIA_en2, $DATABASE_SERVER_USER,
 					$DATABASE_SERVER_PW, $DATABASE_SERVER_PORT,

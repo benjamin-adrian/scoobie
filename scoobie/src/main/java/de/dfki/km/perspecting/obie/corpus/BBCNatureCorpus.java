@@ -24,44 +24,67 @@
 package de.dfki.km.perspecting.obie.corpus;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.net.URI;
 import java.net.URLDecoder;
-import java.util.Collection;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
-import org.junit.Test;
 import org.openrdf.model.Statement;
 import org.openrdf.model.impl.URIImpl;
 import org.openrdf.model.vocabulary.RDFS;
 import org.openrdf.repository.sail.SailRepository;
 import org.openrdf.repository.sail.SailRepositoryConnection;
 import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.ntriples.NTriplesWriter;
 import org.openrdf.sail.memory.MemoryStore;
+
+import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 
 public class BBCNatureCorpus extends LabeledTextCorpus {
 
-	public BBCNatureCorpus(File labelFolder, TextCorpus corpus) {
-		super(labelFolder, corpus);
+	public BBCNatureCorpus(File labelFolder, TextCorpus corpus) throws Exception {
+		super(labelFolder, MediaType.ZIP, corpus);
 	}
 
-	@Override
-	public Reader getGroundTruth(URI uri) throws Exception {
-		File labelFile = new File(super.getCorpus().getAbsoluteFile()
-				+ "/"
-				+ URLDecoder.decode(new File(uri.toURL().getFile()).getName(),
-						"utf-8"));
+	
+	public Reader getGroundTruth(final URI uri) throws Exception {
+		if (labelFileMediaType == MediaType.DIRECTORY) {
+			return new StringReader(FileUtils.readFileToString(new File(uri)));
+		} else if (labelFileMediaType == MediaType.ZIP) {
+			ZipFile zipFile = new ZipFile(labelFolder);
+			String[] entryName = uri.toURL().getFile().split("/");
+			ZipEntry entry = zipFile.getEntry(URLDecoder.decode(
+					entryName[entryName.length - 1], "utf-8").replace("text", "rdf"));
 
+			if (entry != null) {
+				log.info("found labels for: " + uri.toString());
+			} else {
+				throw new Exception("did not found labels for: " + uri.toString());
+			}
+			return new InputStreamReader(zipFile.getInputStream(entry));
+		} else {
+			throw new Exception("Unsupported media format for labels: "
+					+ labelFileMediaType + ". "
+					+ "Please use zip or plain directories instead.");
+		}
+	}
+
+	/**
+	 * This method is a hook for inserting a label extraction from different
+	 * label files.
+	 */
+	protected Reader extractLabels(Reader in) throws Exception {
+		
+		
 		SailRepository sr = new SailRepository(new MemoryStore());
 		SailRepositoryConnection conn;
 		sr.initialize();
 		conn = sr.getConnection();
-		conn.add(labelFile, "http://www.bbc.co.uk/", RDFFormat.RDFXML);
+		conn.add(in, "http://www.bbc.co.uk/", RDFFormat.RDFXML);
 
 		final StringBuffer b = new StringBuffer();
 
@@ -77,46 +100,6 @@ public class BBCNatureCorpus extends LabeledTextCorpus {
 			b.append("\n");
 		}
 		return new StringReader(b.toString());
-	}
-
-	@Test
-	public void run() throws Exception,
-			IOException {
-
-		String rdf = "/media/Daten/corpora/wildlife/rdf/";
-
-		File folder = new File(rdf);
-		
-		
-		SailRepository sr = new SailRepository(new MemoryStore());
-		SailRepositoryConnection conn;
-		sr.initialize();
-		conn = sr.getConnection();
-		
-		
-		
-		for (File f : (Collection<File>) FileUtils.listFiles(folder,
-				new String[] { "rdf" }, false)) {
-			
-			conn.add(f, "http://www.bbc.co.uk/", RDFFormat.RDFXML);
-			
-//			String name = f.getName();
-//			String url = URLDecoder.decode(name, "utf-8").replaceAll("\\.rdf",
-//					"");
-//
-//			File newfile = new File("/media/Daten/corpora/wildlife/text/"
-//					+ name);
-//			if (!newfile.exists())
-//				try {
-//					FileUtils.copyURLToFile(new URL(url), newfile);
-//				} catch (Exception e) {
-//					e.printStackTrace();
-//				}
-
-		}
-		
-		conn.export(new NTriplesWriter(new FileOutputStream("/media/Daten/corpora/wildlife/wildlife3.nt")));
-
 	}
 
 }

@@ -37,20 +37,20 @@ import java.util.Set;
 
 import org.junit.Test;
 
+import de.dfki.km.perspecting.obie.corpus.TextCorpus;
 import de.dfki.km.perspecting.obie.corpus.WikinewsCorpus;
 import de.dfki.km.perspecting.obie.postprocessor.ListSerializer;
+import de.dfki.km.perspecting.obie.vocabulary.Language;
+import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 public class ScoobieExperiment {
 
 	/******************* technical setup ******************************************/
 
 	private static String $PHD_HOME = "/home/adrian/Dokumente/diss/";
-	private static String $SCOOBIE_HOME = $PHD_HOME + "scoobie/";
 	private static String $CORPUS_HOME = $PHD_HOME + "textcorpus/";
 
 	private static String $DATABASE_DBPEDIA_en2 = "dbpedia_en2";
-	private static String $DATABASE_BBC_MUSIC = "bbc_music";
-	private static String $DATABASE_BBC_WILDLIFE = "bbc_wildlife";
 
 	private static String $DATABASE_SERVER_PC_4327 = "pc-4327.kl.dfki.de";
 	private static String $DATABASE_SERVER_LOCALHOST = "localhost";
@@ -63,12 +63,6 @@ public class ScoobieExperiment {
 	/******************* vocabulary ******************************************/
 	
 	private final String RDFS_LABEL = "http://www.w3.org/2000/01/rdf-schema#label";
-	private final String DC_TITLE = "http://purl.org/dc/terms/title";
-	private final String DC_TITLE_ELEMENTS = "http://purl.org/dc/elements/1.1/title";
-	private final String WO_SPECIESNAME = "http://purl.org/ontology/wo/speciesName";
-	private final String FOAF_NAME = "http://xmlns.com/foaf/0.1/name";
-	private final String OV_SORTLABEL = "http://open.vocab.org/terms/sortLabel";
-	private final String DBONT_REVIEW = "http://dbpedia.org/ontology/review";
 
 	
 	
@@ -76,8 +70,14 @@ public class ScoobieExperiment {
 	@Test
 	public void testSystem() throws Exception {
 
-		final File wikinewsFolder = new File($CORPUS_HOME + "en/wikinews/");
-		final WikinewsCorpus corpus = new WikinewsCorpus(wikinewsFolder);
+		final WikinewsCorpus corpus = new WikinewsCorpus(
+				new File(
+						"../corpora/wikinews/wikinews_text_labels.zip"),
+				new TextCorpus(
+						new File(
+								"../corpora/wikinews/wikinews_text_labels.zip"),
+						MediaType.ZIP, MediaType.HTML, Language.EN));
+		
 
 		final Scoobie $ = new Scoobie($DATABASE_DBPEDIA_en2,
 				$DATABASE_SERVER_USER, $DATABASE_SERVER_PW,

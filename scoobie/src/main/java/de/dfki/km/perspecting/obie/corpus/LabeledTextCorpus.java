@@ -125,8 +125,8 @@ public class LabeledTextCorpus extends TextCorpus {
 	private final static Pattern DATE = Pattern
 			.compile("[0-9]+[\\p{Punct}[0-9]+]+");
 
-	private File labelFolder;
-	private MediaType labelFileMediaType;
+	protected File labelFolder;
+	protected MediaType labelFileMediaType;
 
 	public LabeledTextCorpus(File labelFolder, MediaType labelFileMediaType,
 			TextCorpus corpus) throws Exception {

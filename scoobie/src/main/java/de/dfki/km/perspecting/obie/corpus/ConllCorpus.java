@@ -38,15 +38,15 @@ import de.dfki.km.perspecting.obie.model.DocumentProcedure;
 import de.dfki.km.perspecting.obie.vocabulary.Language;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
-public class ConllCorpus extends LabeledTextCorpus {
+public class ConllCorpus extends TextCorpus {
 
 	private static final String NEWLINE = "\n";
 	private static final String SPACE = " ";
 	
 	private static final String DOCSTART_X_O_O = "-DOCSTART-";
 
-	public ConllCorpus(File corpusDir) {
-		super(corpusDir, MediaType.TEXT, Language.EN);
+	public ConllCorpus(File corpusDir) throws Exception {
+		super(corpusDir, MediaType.ZIP, MediaType.TEXT, Language.EN);
 	}
 	
 	
@@ -78,7 +78,7 @@ public class ConllCorpus extends LabeledTextCorpus {
 
 		});
 		
-		return new TextCorpus(outputFolder, MediaType.TEXT, Language.EN);
+		return new TextCorpus(outputFolder, MediaType.DIRECTORY, MediaType.TEXT, Language.EN);
 	}
 
 	@SuppressWarnings("unchecked")

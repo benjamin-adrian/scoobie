@@ -23,56 +23,41 @@
 
 package de.dfki.km.perspecting.obie.corpus;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.Reader;
 import java.io.StringReader;
-import java.net.URI;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.FileUtils;
 
-import de.dfki.km.perspecting.obie.model.DocumentProcedure;
-import de.dfki.km.perspecting.obie.vocabulary.Language;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 public class WikinewsCorpus extends LabeledTextCorpus {
 	
 	private final static Pattern p = Pattern.compile("(\"http://dbpedia.org/\\w+/\\w+\")", Pattern.CASE_INSENSITIVE);
 
-	public WikinewsCorpus(File folder) {
-		super(folder, MediaType.HTML, Language.EN);
+	
+	public WikinewsCorpus(File labelFolder, TextCorpus corpus) throws Exception {
+		super(labelFolder, MediaType.ZIP, corpus);
 	}
 	
-	@SuppressWarnings("unchecked")
-	public List<?> forEach(DocumentProcedure<?> p) throws Exception {
-		List l = new ArrayList();
-		for (File f : getFiles(corpus)) {
-			log.info("processing file: " + f.getName());
-			String content = FileUtils.readFileToString(f, "utf-8");
-			l.add(p.process(new StringReader(content), f.toURI()));
-		}
-		return l;
-	}
 	
 	@Override
-	public Reader getGroundTruth(URI uri) throws Exception {
-			
-		String content = FileUtils.readFileToString(new File (URLDecoder.decode(uri.toString(), "utf-8").replaceAll("file:", "")), "utf-8");
-		Matcher m = p.matcher(content);
+	public Reader extractLabels(Reader in) throws Exception {
 
+		BufferedReader br = new BufferedReader(in);
+		
 		final StringBuffer b = new StringBuffer();
-		
-		while (m.find()) {
-			b.append(m.group().replaceAll("/page/", "/resource/").replaceAll("\"", ""));
-			b.append("\n");
+
+		for(String line = br.readLine(); line != null; line = br.readLine()) {
+			Matcher m = p.matcher(line);
+			while (m.find()) {
+				b.append(m.group().replaceAll("/page/", "/resource/").replaceAll("\"", ""));
+				b.append("\n");
+			}
 		}
-		
 		return new StringReader(b.toString());
-		
 	}
 
 }

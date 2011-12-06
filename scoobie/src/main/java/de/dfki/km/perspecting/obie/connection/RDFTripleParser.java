@@ -127,7 +127,7 @@ public class RDFTripleParser {
 			throws Exception {
 
 		final TripleStats stats = new TripleStats();
-		int count = 0;
+//		int count = 0;
 
 		new File(sessionPath.getAbsolutePath() + "/dump/").mkdirs();
 
@@ -135,6 +135,9 @@ public class RDFTripleParser {
 				+ "/dump/datatypeProperties.lst");
 		stats.objectProps = new File(sessionPath.getAbsolutePath() + "/dump/objectProperties.lst");
 
+		stats.datatypeProps.deleteOnExit();
+		stats.objectProps.deleteOnExit();
+		
 		stats.datatypeProps.setReadable(true, false);
 		stats.objectProps.setReadable(true, false);
 

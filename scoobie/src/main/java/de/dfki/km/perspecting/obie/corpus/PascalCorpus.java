@@ -23,16 +23,8 @@
 
 package de.dfki.km.perspecting.obie.corpus;
 
-import java.io.File;
+public class PascalCorpus {
 
-import de.dfki.km.perspecting.obie.vocabulary.Language;
-import de.dfki.km.perspecting.obie.vocabulary.MediaType;
-
-public class PascalCorpus extends TextCorpus {
-
-	public PascalCorpus(File corpusDir) {
-		super(corpusDir, MediaType.TEXT, Language.EN);
-	}
 //
 //	public PascalCorpus(File corpusDir) {
 //		super(corpusDir);
