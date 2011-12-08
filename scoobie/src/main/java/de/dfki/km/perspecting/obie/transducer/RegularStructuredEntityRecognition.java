@@ -23,25 +23,51 @@
 
 package de.dfki.km.perspecting.obie.transducer;
 
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.model.Document;
-import de.dfki.km.perspecting.obie.preprocessor.RegexEntityRecognitionModel;
+import de.dfki.km.perspecting.obie.model.Token;
 import de.dfki.km.perspecting.obie.workflow.Transducer;
 
 public class RegularStructuredEntityRecognition extends Transducer {
 
-	private final RegexEntityRecognitionModel patterns;
-
-	public RegularStructuredEntityRecognition(RegexEntityRecognitionModel regexModel) {
-		this.patterns = regexModel;
+	private String[] patterns;
+	
+	public RegularStructuredEntityRecognition(String[] patterns) {
+		this.patterns = patterns;
 	}
 
 	@Override
 	public void transduce(final Document document, final KnowledgeBase kb)
 			throws Exception {
 		
-		for(String regex : patterns.getRegexs()) {
-			patterns.transduce(document, regex);
+		for(String regex : patterns) {
+			transduce(document, regex);
+		}
+	}
+	
+	private void transduce(Document document, String regex) {
+
+		Pattern pattern = Pattern.compile(regex);
+		String text = document.getPlainTextContent();
+		Matcher matcher = pattern.matcher(text);
+		while (matcher.find()) {
+			int start = matcher.start();
+			int end = matcher.end();
+			List<Token> token = document.getTokens(start, end);
+
+			for (int i = 0; i < token.size(); i++) {
+
+				String position = "I";
+
+				if (i == 0) {
+					position = "B";
+				}
+				token.get(i).addRegexMatch(position, regex);
+			}
 		}
 	}
 

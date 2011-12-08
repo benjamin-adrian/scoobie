@@ -49,8 +49,6 @@ import de.dfki.km.perspecting.obie.model.DocumentProcedure;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
 import de.dfki.km.perspecting.obie.model.Scoobie;
 import de.dfki.km.perspecting.obie.postprocessor.RDFSerializer;
-import de.dfki.km.perspecting.obie.preprocessor.Cardinalities;
-import de.dfki.km.perspecting.obie.preprocessor.MarkovChain;
 import de.dfki.km.perspecting.obie.transducer.EntityDisambiguation;
 import de.dfki.km.perspecting.obie.transducer.FactRecommender;
 import de.dfki.km.perspecting.obie.transducer.InstanceRecognition;
@@ -202,37 +200,39 @@ public class FactRecommendationExperiment {
 	@Test
 	public void createCardinalities() throws Exception {
 		setUp($DATABASE_DBPEDIA_en2, $DATABASE_SERVER_PC_4327);
-		new Cardinalities(kb).train();
+		
+		kb.calculateCardinalities();
+		
 	}
 	
 	@Test
 	public void createCardinalitiesBBCNature() throws Exception {
 		setUp($DATABASE_BBC_WILDLIFE, $DATABASE_SERVER_LOCALHOST);
-		new Cardinalities(kb).train();
+		kb.calculateCardinalities();
 	}
 	
 	@Test
 	public void createCardinalitiesBBCMusic() throws Exception {
 		setUp($DATABASE_BBC_MUSIC, $DATABASE_SERVER_LOCALHOST);
-		new Cardinalities(kb).train();
+		kb.calculateCardinalities();
 	}
 	
 	@Test
 	public void createMarkovChain() throws Exception {
 		setUp($DATABASE_DBPEDIA_en2, $DATABASE_SERVER_PC_4327);
-		new MarkovChain(kb, 100, new int[] {}).train();
+		kb.calculateMarkovChain(new int[] {}, 100);
 	}
 	
 	@Test
 	public void createMarkovChainBBCNature() throws Exception {
 		setUp($DATABASE_BBC_WILDLIFE, $DATABASE_SERVER_LOCALHOST);
-		new MarkovChain(kb, 100, new int[] {}).train();
+		kb.calculateMarkovChain(new int[] {}, 100);
 	}
 
 	@Test
 	public void createMarkovChainBBCMusic() throws Exception {
 		setUp($DATABASE_BBC_MUSIC, $DATABASE_SERVER_LOCALHOST);
-		new MarkovChain(kb, 100, new int[] {}).train();
+		kb.calculateMarkovChain(new int[] {}, 100);
 	}
 
 	/**

@@ -39,7 +39,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
+import de.dfki.km.perspecting.obie.connection.RemoteCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.SemanticEntity;
 import de.dfki.km.perspecting.obie.model.Token;
@@ -104,7 +104,7 @@ public class InstanceRecognition extends Transducer {
 			}
 
 			if (!valuePropertyMap.isEmpty()) {
-				final ResultSetCursor rs = kb
+				final RemoteCursor rs = kb
 						.getInstanceCandidates(valuePropertyMap);
 
 				TIntHashSet subjects = new TIntHashSet();
@@ -210,7 +210,7 @@ public class InstanceRecognition extends Transducer {
 			int[] subjects,
 			HashMap<Integer, List<TokenSequence<SemanticEntity>>> subjectsLiterals)
 			throws Exception, SQLException {
-		final ResultSetCursor typeResults = ontology
+		final RemoteCursor typeResults = ontology
 				.getRDFTypesForInstances(subjects);
 
 		HashMap<Integer, TIntHashSet> types = new HashMap<Integer, TIntHashSet>();

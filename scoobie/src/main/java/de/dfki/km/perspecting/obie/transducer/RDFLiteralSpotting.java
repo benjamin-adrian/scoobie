@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
+import de.dfki.km.perspecting.obie.connection.RemoteCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.SemanticEntity;
 import de.dfki.km.perspecting.obie.model.TextPointer;
@@ -66,7 +66,7 @@ public class RDFLiteralSpotting extends Transducer {
 			log.info("Request Symbols Candidates");
 
 			long start = System.currentTimeMillis();
-			final ResultSetCursor values = kb.getDatatypePropertyValues(
+			final RemoteCursor values = kb.getDatatypePropertyValues(
 					datatypePropertyFilter.toArray(), suffixes
 							.getCommonPrefixStrings());
 			log.info("Request Symbols Candidates took: "

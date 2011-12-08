@@ -28,7 +28,7 @@ import gnu.trove.TIntHashSet;
 import java.util.logging.Logger;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
+import de.dfki.km.perspecting.obie.connection.RemoteCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.RDFEdge;
 import de.dfki.km.perspecting.obie.model.SemanticEntity;
@@ -68,7 +68,7 @@ public class KnownFactsRetrieval extends Transducer {
 //			}
 //		}
 
-		ResultSetCursor out = kb
+		RemoteCursor out = kb
 				.getOutgoingRelations(instances.toArray());
 		while (out.next()) {
 			int s = out.getInt(1);

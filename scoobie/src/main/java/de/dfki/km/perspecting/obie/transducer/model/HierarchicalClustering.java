@@ -21,7 +21,7 @@
     along with SCOOBIE.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.dfki.km.perspecting.obie.preprocessor;
+package de.dfki.km.perspecting.obie.transducer.model;
 
 import java.util.ArrayList;
 import java.util.Arrays;

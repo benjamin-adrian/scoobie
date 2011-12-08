@@ -38,7 +38,7 @@ import com.ibm.icu.text.Collator;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.connection.RemoteCursor;
-import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
+import de.dfki.km.perspecting.obie.connection.RemoteCursor;
 import de.dfki.km.perspecting.obie.model.TextPointer;
 import de.dfki.km.perspecting.obie.model.Token;
 
@@ -200,7 +200,7 @@ public class SuffixArray {
 	}
 
 	protected void dbSort() throws Exception {
-		ResultSetCursor rs = ontology.dbSort(index, maxLength);
+		RemoteCursor rs = ontology.dbSort(index, maxLength);
 		if (rs != null) {
 			while (rs.next()) {
 				index2.add(rs.getString(1));

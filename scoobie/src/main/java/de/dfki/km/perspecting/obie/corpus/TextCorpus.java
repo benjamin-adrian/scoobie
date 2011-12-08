@@ -23,7 +23,11 @@
 
 package de.dfki.km.perspecting.obie.corpus;
 
+import gnu.trove.TDoubleFunction;
+import gnu.trove.TIntDoubleHashMap;
 import gnu.trove.TIntHashSet;
+import gnu.trove.TIntIntHashMap;
+import gnu.trove.TIntIntProcedure;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -59,8 +63,10 @@ import org.apache.lucene.search.IndexSearcher;
 
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.DocumentProcedure;
+import de.dfki.km.perspecting.obie.model.SemanticEntity;
 import de.dfki.km.perspecting.obie.model.Token;
 import de.dfki.km.perspecting.obie.model.TokenSequence;
+import de.dfki.km.perspecting.obie.transducer.RDFLiteralSpotting;
 import de.dfki.km.perspecting.obie.vocabulary.Language;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 import de.dfki.km.perspecting.obie.workflow.Pipeline;
@@ -168,6 +174,63 @@ public class TextCorpus {
 
 		return new IndexSearcher(dir.getAbsolutePath());
 	}
+	
+	
+	@SuppressWarnings("unchecked")
+	public TIntDoubleHashMap getDocumentFrequency(final Pipeline pipe) throws Exception {
+
+		// calculate property frequency per document
+		final List<TIntIntHashMap> results = (List<TIntIntHashMap>) forEach(new DocumentProcedure<TIntIntHashMap>() {
+
+					@Override
+					public TIntIntHashMap process(final Reader file,
+							final URI uri) throws Exception {
+
+						final Document document = pipe.createDocument(file,
+								uri, getMediatype(), "SELECT * WHERE {?s ?p ?o}", getLanguage());
+
+						final TIntIntHashMap stats = new TIntIntHashMap();
+						for (int step = 0; pipe.hasNext(step) && step < 8; step = pipe
+								.execute(step, document)) {
+							if (step > 0
+									&& pipe.getTranducer(step - 1).getClass()
+											.equals(RDFLiteralSpotting.class)) {
+								for (final TokenSequence<SemanticEntity> se : document
+										.getRetrievedPropertyValues()) {
+									stats.adjustOrPutValue(se.getValue()
+											.getPropertyIndex(), 1, 1);
+								}
+								break;
+							}
+						}
+						return stats;
+					}
+				});
+
+		final TIntDoubleHashMap propertyIDF = new TIntDoubleHashMap();
+
+		for (TIntIntHashMap indexedDoc : results) {
+			indexedDoc.forEachEntry(new TIntIntProcedure() {
+				@Override
+				public boolean execute(int property, int value) {
+					propertyIDF.adjustOrPutValue(property, 1.0, 1.0);
+					return true;
+				}
+			});
+		}
+
+		propertyIDF.transformValues(new TDoubleFunction() {
+			@Override
+			public double execute(double value) {
+
+				double idf = ((double) results.size()) / (value + 1);
+				return idf;
+			}
+		});
+
+		return propertyIDF;
+	}
+	
 
 	public LabeledTextCorpus labelRDFTypes(final File corpus,
 			final Pipeline pipeline, final String template) throws Exception {

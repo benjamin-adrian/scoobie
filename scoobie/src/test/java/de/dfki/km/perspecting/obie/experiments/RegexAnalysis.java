@@ -32,7 +32,6 @@ import org.postgresql.jdbc2.optional.PoolingDataSource;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.connection.PostgresKB;
-import de.dfki.km.perspecting.obie.preprocessor.RegexEntityRecognitionModel;
 import de.dfki.km.perspecting.obie.workflow.Pipeline;
 
 public class RegexAnalysis {
@@ -85,7 +84,7 @@ public class RegexAnalysis {
 		String ISBN10 = "ISBN\\\\x20(?=.{13}$)\\\\d{1,5}([- ])\\\\d{1,7}\\\\1\\\\d{1,6}\\\\1(\\\\d|X)$";
 		String FLOAT = "[-]?[0-9]+\\\\.[0-9]+";
 		String POINT = "[-]?[0-9]+\\\\.[0-9]+ [-]?[0-9]+\\\\.[0-9]+";
-		String[] regex = new String[] { DATE, FLOAT, POINT };
+		String[] patterns = new String[] { DATE, FLOAT, POINT };
 
 //		System.out.println(Pattern.compile(POINT).matcher(
 //				"31.8182 34.7541").find());
@@ -96,12 +95,12 @@ public class RegexAnalysis {
 //				"The isbn is ISBN 1-56389-668-0").find());
 
 //
-		 RegexEntityRecognitionModel regexModel = new RegexEntityRecognitionModel(regex, kb);
+		kb.calculateRegexDistributions(patterns);
 	//	 regexModel.train(); 
 		 
-		 for(String r : regex) {
-			 TIntDoubleHashMap set = regexModel.getDatatypeProperties(r);
-			 System.out.println(r);
+		 for(String regex : patterns) {
+			 TIntDoubleHashMap set = kb.getDatatypePropertiesForRegex(regex);
+			 System.out.println(regex);
 			 for(int p : set.keys()) {
 				 System.out.println(kb.getURI(p) +" " + set.get(p));
 			 }

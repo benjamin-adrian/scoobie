@@ -59,7 +59,6 @@ import cern.colt.matrix.doublealgo.Statistic;
 import de.dfki.km.perspecting.obie.connection.PostgresKB;
 import de.dfki.km.perspecting.obie.model.DataSheet;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
-import de.dfki.km.perspecting.obie.preprocessor.RDFTypeClustering;
 
 public class ClusterTypesExperiment {
 
@@ -105,8 +104,8 @@ public class ClusterTypesExperiment {
 		
 		final int countSamples = 20;
 
-		RDFTypeClustering clustering = new RDFTypeClustering(kb, countSamples, 0.9, 0.175);
-		clustering.train();
+		kb.clusterCorrelatingClasses(countSamples, 0.9, 0.175);
+		
 
 	}
 	
@@ -116,9 +115,7 @@ public class ClusterTypesExperiment {
 		setUp($DATABASE_SERVER_LOCALHOST, $DATABASE_BBC_MUSIC);
 		
 		final int countSamples = 20;
-
-		RDFTypeClustering clustering = new RDFTypeClustering(kb, countSamples, 0.9, 0.175);
-		clustering.train();
+		kb.clusterCorrelatingClasses(countSamples, 0.9, 0.175);
 
 	}
 	
@@ -129,9 +126,7 @@ public class ClusterTypesExperiment {
 		setUp($DATABASE_SERVER_LOCALHOST, $DATABASE_BBC_WILDLIFE);
 		
 		final int countSamples = 10;
-
-		RDFTypeClustering clustering = new RDFTypeClustering(kb, countSamples, 0.9, 0.175);
-		clustering.train();
+		kb.clusterCorrelatingClasses(countSamples, 0.9, 0.175);
 
 	}
 	
@@ -249,9 +244,8 @@ public class ClusterTypesExperiment {
 		
 		final int countSamples = 20;
 		// final double threshold = 0.75;
-
-		RDFTypeClustering clustering = new RDFTypeClustering(kb, countSamples, 0.9, 0.175);
-		final DoubleMatrix data = clustering.getTypeCorrelations();
+		kb.clusterCorrelatingClasses(countSamples, 0.9, 0.175);
+		final DoubleMatrix data = kb.getTypeCorrelations(countSamples);
 		// final DoubleMatrix2D cp = data.conditionalProbabiltyDoubleMatrix(0);
 		//		
 		// Formatter f = new Formatter();

@@ -33,7 +33,6 @@ import org.postgresql.jdbc2.optional.PoolingDataSource;
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.connection.PostgresKB;
 import de.dfki.km.perspecting.obie.corpus.TextCorpus;
-import de.dfki.km.perspecting.obie.preprocessor.RegexEntityRecognitionModel;
 import de.dfki.km.perspecting.obie.transducer.EntityClassification;
 import de.dfki.km.perspecting.obie.transducer.EntityDisambiguation;
 import de.dfki.km.perspecting.obie.transducer.FactRecommender;
@@ -117,11 +116,11 @@ public class Scoobie {
 		String ISBN10 = "ISBN\\\\x20(?=.{13}$)\\\\d{1,5}([- ])\\\\d{1,7}\\\\1\\\\d{1,6}\\\\1(\\\\d|X)$";
 		String FLOAT = "[-]?[0-9]+\\\\.[0-9]+";
 		String POINT = "[-]?[0-9]+\\\\.[0-9]+ [-]?[0-9]+\\\\.[0-9]+";
-		String[] regex = new String[] { DATE, FLOAT, POINT };
-		RegexEntityRecognitionModel regexModel = new RegexEntityRecognitionModel(
-				regex, kb);
+		String[] patterns = new String[] { DATE, FLOAT, POINT };
+		
+		kb.calculateRegexDistributions(patterns);
 		RegularStructuredEntityRecognition structuredEntityRecognizer = new RegularStructuredEntityRecognition(
-				regexModel);
+				patterns);
 
 
 

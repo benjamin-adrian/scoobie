@@ -47,7 +47,7 @@ import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.connection.PostgresKB;
-import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
+import de.dfki.km.perspecting.obie.connection.RemoteCursor;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
 import de.dfki.km.perspecting.obie.workflow.Pipeline;
 
@@ -117,7 +117,7 @@ public class PredictFactsExperiment {
 
 		int limit = 10;
 		for (int cluster : kb.getClusters()) {
-			ResultSetCursor rs1 = kb.getInstancesOfTypes(cluster, limit);
+			RemoteCursor rs1 = kb.getInstancesOfTypes(cluster, limit);
 			System.out.println("Received instances for clusters.");
 			TIntHashSet instances = new TIntHashSet();
 			while (rs1.next()) {
@@ -125,7 +125,7 @@ public class PredictFactsExperiment {
 			}
 			rs1.close();
 
-			ResultSetCursor rs2 = kb
+			RemoteCursor rs2 = kb
 					.getOutgoingRelations(instances.toArray());
 			System.out.println("Received outgoing links instances.");
 			while (rs2.next()) {

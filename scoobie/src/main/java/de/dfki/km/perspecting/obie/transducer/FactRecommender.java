@@ -38,14 +38,12 @@ import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.doublealgo.Statistic;
 import cern.colt.matrix.linalg.Algebra;
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
+import de.dfki.km.perspecting.obie.connection.RemoteCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
 import de.dfki.km.perspecting.obie.model.RDFEdge;
 import de.dfki.km.perspecting.obie.model.SemanticEntity;
 import de.dfki.km.perspecting.obie.model.TokenSequence;
-import de.dfki.km.perspecting.obie.preprocessor.Cardinalities;
-import de.dfki.km.perspecting.obie.preprocessor.MarkovChain;
 import de.dfki.km.perspecting.obie.workflow.Transducer;
 import edu.uci.ics.jung.graph.DirectedGraph;
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
@@ -87,7 +85,7 @@ public class FactRecommender extends Transducer {
 
 		TIntObjectHashMap<TIntHashSet> dClassifications = new TIntObjectHashMap<TIntHashSet>();
 
-		ResultSetCursor rs = kb.getRDFTypesForInstances(instances.toArray());
+		RemoteCursor rs = kb.getRDFTypesForInstances(instances.toArray());
 		while (rs.next()) {
 			TIntHashSet types = dClassifications.get(rs.getInt(1));
 			if (types == null) {
@@ -164,7 +162,7 @@ public class FactRecommender extends Transducer {
 
 		TIntObjectHashMap<TIntHashSet> dClassifications = new TIntObjectHashMap<TIntHashSet>();
 
-		ResultSetCursor rs = kb.getRDFTypesForInstances(instances.toArray());
+		RemoteCursor rs = kb.getRDFTypesForInstances(instances.toArray());
 		while (rs.next()) {
 			TIntHashSet types = dClassifications.get(rs.getInt(1));
 			if (types == null) {
@@ -195,15 +193,16 @@ public class FactRecommender extends Transducer {
 	private void transduceMarkov(Document document, KnowledgeBase kb,
 			TIntIntHashMap classification, int kBest,
 			DirectedGraph<Integer, RDFEdge> graph) throws Exception {
-		MarkovChain markov = new MarkovChain(kb, 10, new int[] {});
-		markov.cache();
+
+		kb.calculateMarkovChain(new int[] {}, 10);
+
 
 		for (int subject : classification.keys()) {
 			for (int object : classification.keys()) {
 				if (object != subject) {
 					int type_s = classification.get(subject);
 					int type_o = classification.get(object);
-					for (double[] pp : markov.getMaxProbability(type_s, type_o,
+					for (double[] pp : kb.getMaxMarkovProbability(type_s, type_o,
 							kBest)) {
 						graph.addEdge(new RDFEdge((int) pp[0], pp[1]), subject,
 								object);
@@ -253,11 +252,8 @@ public class FactRecommender extends Transducer {
 
 		int sum = 0;
 
-		MarkovChain markov = new MarkovChain(kb, 10, new int[] {});
-		Cardinalities card = new Cardinalities(kb);
-		card.cache();
-		markov.cache();
-
+		kb.calculateMarkovChain(new int[] {}, 10);
+		
 		// System.out.println(classification.keys().length);
 		for (int k = 0; k < spoList.size(); k++) {
 			if ((classification.contains(l_spoList.get(k)[0]) && classification
@@ -269,11 +265,10 @@ public class FactRecommender extends Transducer {
 						if (object != subject) {
 							int type_s = classification.get(subject);
 							int type_o = classification.get(object);
-							for (double[] pp : markov.getMaxProbability(type_s,
+							for (double[] pp : kb.getMaxMarkovProbability(type_s,
 									type_o, kBest)) {
 								int predicate = (int) pp[0];
-								double cardinality = card
-										.getSubjectCardiniality(predicate);
+								double cardinality = kb.getSubjectCardinality(predicate);
 								boolean exists = false;
 								for (RDFEdge e : document.getGraph()
 										.findEdgeSet(subject, object)) {
@@ -377,8 +372,7 @@ public class FactRecommender extends Transducer {
 		double unknown = 0;
 
 		int sum = 0;
-
-		MarkovChain markov = new MarkovChain(kb, 10, new int[] {});
+		kb.calculateMarkovChain(new int[] {}, 10);
 
 		for (int k = 0; k < spoList.size(); k++) {
 
@@ -445,7 +439,7 @@ public class FactRecommender extends Transducer {
 										int type_s = classification
 												.get(subject);
 										int type_o = classification.get(object);
-										pr = markov.getProbability(type_s,
+										pr = kb.getMarkovProbability(type_s,
 												predicate, type_o);
 										if (pr == 0) {
 											pr = 0.000001;

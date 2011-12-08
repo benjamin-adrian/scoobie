@@ -42,7 +42,6 @@ import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.FilterContext;
 import de.dfki.km.perspecting.obie.model.Scoobie;
 import de.dfki.km.perspecting.obie.postprocessor.ListSerializer;
-import de.dfki.km.perspecting.obie.preprocessor.RegexEntityRecognitionModel;
 import de.dfki.km.perspecting.obie.transducer.EntityClassification;
 import de.dfki.km.perspecting.obie.transducer.EntityDisambiguation;
 import de.dfki.km.perspecting.obie.transducer.FactRecommender;
@@ -161,9 +160,9 @@ public class QueryExperiment {
 		String ISBN10 = "ISBN\\\\x20(?=.{13}$)\\\\d{1,5}([- ])\\\\d{1,7}\\\\1\\\\d{1,6}\\\\1(\\\\d|X)$";
 		String FLOAT = "[-]?[0-9]+\\\\.[0-9]+";
 		String POINT = "[-]?[0-9]+\\\\.[0-9]+ [-]?[0-9]+\\\\.[0-9]+";
-		String[] regex = new String[] { DATE, FLOAT, POINT };
-		RegexEntityRecognitionModel regexModel = new RegexEntityRecognitionModel(regex, kb);
-		RegularStructuredEntityRecognition structuredEntityRecognizer = new RegularStructuredEntityRecognition(regexModel);
+		String[] patterns = new String[] { DATE, FLOAT, POINT };
+		kb.calculateRegexDistributions(patterns);
+		RegularStructuredEntityRecognition structuredEntityRecognizer = new RegularStructuredEntityRecognition(patterns);
 		
 
 		

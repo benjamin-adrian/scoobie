@@ -34,7 +34,7 @@ import java.util.TreeMap;
 import java.util.logging.Logger;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
+import de.dfki.km.perspecting.obie.connection.RemoteCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
 import de.dfki.km.perspecting.obie.model.RDFEdge;
@@ -411,7 +411,7 @@ public class EntityDisambiguation extends Transducer {
 
 		TIntHashSet newReferences = new TIntHashSet();
 
-		ResultSetCursor rs = kb.getIncomingRelations(objects);
+		RemoteCursor rs = kb.getIncomingRelations(objects);
 
 		while (rs.next()) {
 			int subject = rs.getInt(1);
@@ -437,7 +437,7 @@ public class EntityDisambiguation extends Transducer {
 	private TIntHashSet traverseForward(KnowledgeBase kb, int[] uriRefs,
 			DirectedGraph<Integer, RDFEdge> graph) throws Exception {
 
-		ResultSetCursor rs = kb.getOutgoingRelations(uriRefs);
+		RemoteCursor rs = kb.getOutgoingRelations(uriRefs);
 
 		TIntHashSet newReferences = new TIntHashSet();
 

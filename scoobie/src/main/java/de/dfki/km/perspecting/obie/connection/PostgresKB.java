@@ -23,8 +23,13 @@
 
 package de.dfki.km.perspecting.obie.connection;
 
+import gnu.trove.TIntDoubleHashMap;
 import gnu.trove.TIntHashSet;
 import gnu.trove.TIntIntHashMap;
+import gnu.trove.TIntObjectHashMap;
+import gnu.trove.TIntObjectProcedure;
+import gnu.trove.TObjectIntHashMap;
+import gnu.trove.TObjectIntProcedure;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -41,8 +46,10 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -51,10 +58,21 @@ import java.util.logging.Logger;
 
 import org.openrdf.model.vocabulary.RDF;
 
+import cern.colt.matrix.DoubleMatrix1D;
+import cern.colt.matrix.DoubleMatrix2D;
+import cern.colt.matrix.doublealgo.Statistic;
+
 import de.dfki.km.perspecting.obie.connection.RDFTripleParser.TripleStats;
+import de.dfki.km.perspecting.obie.corpus.TextCorpus;
+import de.dfki.km.perspecting.obie.model.DoubleMatrix;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
+import de.dfki.km.perspecting.obie.workflow.Pipeline;
 
 public class PostgresKB implements KnowledgeBase {
+
+	private static final String INDEXSCHEME_SQL = "postgres/indexscheme.sql";
+
+	private static final String DBSCHEME_SQL = "postgres/dbscheme.sql";
 
 	private static final Logger log = Logger.getLogger(PostgresKB.class
 			.getName());
@@ -77,10 +95,10 @@ public class PostgresKB implements KnowledgeBase {
 		return uri;
 	}
 
-	@Override
-	public Connection getConnection() {
-		return connection;
-	}
+	// @Override
+	// public Connection getConnection() {
+	// return connection;
+	// }
 
 	public String getSession() {
 		return session;
@@ -116,8 +134,8 @@ public class PostgresKB implements KnowledgeBase {
 	}
 
 	@Override
-	public RemoteCursor getDatatypePropertyValues(
-			int datatypePropertyIndex, int rdfType) throws Exception {
+	public RemoteCursor getDatatypePropertyValues(int datatypePropertyIndex,
+			int rdfType) throws Exception {
 		String sql = "SELECT DISTINCT index_literals.literal, index_literals.index, symbols.belief "
 				+ "FROM index_literals, symbols, relations "
 				+ "WHERE (symbols.belief = 1.0 AND symbols.predicate = ? "
@@ -145,13 +163,12 @@ public class PostgresKB implements KnowledgeBase {
 			int[] datatypePropertyFilter, int[] prefixes) throws Exception {
 		StringBuilder sql = new StringBuilder();
 
-		sql
-				.append("SELECT DISTINCT LOWER(index_literals.literal), index_literals.index, symbols.predicate, symbols.belief, index_literals.literal "
-						+ "FROM index_literals, symbols "
-						+ "WHERE ( "
-						+ "symbols.object = index_literals.index AND "
-						+ "index_literals.prefix IN (");
-		
+		sql.append("SELECT DISTINCT LOWER(index_literals.literal), index_literals.index, symbols.predicate, symbols.belief, index_literals.literal "
+				+ "FROM index_literals, symbols "
+				+ "WHERE ( "
+				+ "symbols.object = index_literals.index AND "
+				+ "index_literals.prefix IN (");
+
 		for (int p : prefixes) {
 			sql.append("(?) , ");
 		}
@@ -195,10 +212,6 @@ public class PostgresKB implements KnowledgeBase {
 			Map<Integer, Set<Integer>> literalKeys) throws Exception {
 
 		final StringBuilder literalFilter = new StringBuilder();
-		int size = 0;
-		for (Set<Integer> set : literalKeys.values()) {
-			size += set.size();
-		}
 
 		for (int l : literalKeys.keySet()) {
 			for (int p : literalKeys.get(l)) {
@@ -256,8 +269,9 @@ public class PostgresKB implements KnowledgeBase {
 
 			for (int i = 0; i < index.size(); i++) {
 				int min = Math.min(maxLength, index.get(i).length());
-				pstmt.setString(i + 1, ((String) index.get(i).subSequence(0,
-						min)).toLowerCase());
+				pstmt.setString(i + 1,
+						((String) index.get(i).subSequence(0, min))
+								.toLowerCase());
 			}
 
 			ResultSet rs = executeQuery(pstmt, sql);
@@ -666,7 +680,7 @@ public class PostgresKB implements KnowledgeBase {
 
 	@Override
 	public ResultSetCursor getRDFTypes() throws Exception {
-		
+
 		if (typeIndex == -1) {
 			typeIndex = getUriIndex(RDF.TYPE.toString());
 		}
@@ -836,7 +850,7 @@ public class PostgresKB implements KnowledgeBase {
 	public int getPropertyType(int property) throws Exception {
 
 		// TODO : This is not good style
-		
+
 		String sql1 = "SELECT (count(*) > 0) FROM symbols WHERE predicate = "
 				+ property;
 		String sql2 = "SELECT (count(*) > 0) FROM relations WHERE predicate = "
@@ -872,10 +886,11 @@ public class PostgresKB implements KnowledgeBase {
 		log.info("Committed bulk import of " + filename + " #entries: " + size);
 
 	}
-	
+
 	@Override
-	public void preprocessRdfData(InputStream[] datasets, MediaType rdfMimeType, MediaType fileMimeType, String absoluteBaseURI)
-			throws Exception {
+	public void preprocessRdfData(InputStream[] datasets,
+			MediaType rdfMimeType, MediaType fileMimeType,
+			String absoluteBaseURI) throws Exception {
 		this.connection.setAutoCommit(false);
 		createDatabase();
 		loadRDFData(datasets, rdfMimeType, absoluteBaseURI, fileMimeType);
@@ -884,19 +899,20 @@ public class PostgresKB implements KnowledgeBase {
 		connection.commit();
 		connection.close();
 	}
-	
-
 
 	private void createIndexes() throws Exception {
 
 		try {
 			Statement s = connection.createStatement();
-						
-			InputStream in = PostgresKB.class.getResourceAsStream("indexscheme.sql");
-			BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-			
+
+			InputStream in = PostgresKB.class
+					.getResourceAsStream(INDEXSCHEME_SQL);
+			BufferedReader reader = new BufferedReader(
+					new InputStreamReader(in));
+
 			StringBuilder builder = new StringBuilder();
-			for(String line = reader.readLine(); line != null; line = reader.readLine()) {
+			for (String line = reader.readLine(); line != null; line = reader
+					.readLine()) {
 				builder.append(line);
 				builder.append("\n");
 			}
@@ -914,17 +930,19 @@ public class PostgresKB implements KnowledgeBase {
 			throw new Exception(e);
 		}
 	}
-	
+
 	private void createDatabase() throws Exception {
 
 		try {
 			Statement s = connection.createStatement();
-						
-			InputStream in = PostgresKB.class.getResourceAsStream("dbscheme.sql");
-			BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-			
+
+			InputStream in = PostgresKB.class.getResourceAsStream(DBSCHEME_SQL);
+			BufferedReader reader = new BufferedReader(
+					new InputStreamReader(in));
+
 			StringBuilder builder = new StringBuilder();
-			for(String line = reader.readLine(); line != null; line = reader.readLine()) {
+			for (String line = reader.readLine(); line != null; line = reader
+					.readLine()) {
 				builder.append(line);
 				builder.append("\n");
 			}
@@ -943,50 +961,50 @@ public class PostgresKB implements KnowledgeBase {
 			throw new Exception(e);
 		}
 	}
-	
+
 	private void loadRDFData(InputStream[] instanceBases,
-			MediaType rdfMimeType, String absoluteBaseURI, MediaType fileMimeType)
-			throws Exception {
+			MediaType rdfMimeType, String absoluteBaseURI,
+			MediaType fileMimeType) throws Exception {
 		final ExecutorService pool = Executors.newCachedThreadPool();
-		
-		
+
 		log.info("Parsing RDF dump files: ... ");
 		long start = System.currentTimeMillis();
 		RDFTripleParser parser = new RDFTripleParser();
 
 		File.createTempFile(session, "").mkdir();
-		
-		
-		
+
 		final TripleStats tripleStats = parser.parseTriples(instanceBases,
-				rdfMimeType, new File(System.getProperty("java.io.tmpdir")), absoluteBaseURI, fileMimeType);
+				rdfMimeType, new File(System.getProperty("java.io.tmpdir")),
+				absoluteBaseURI, fileMimeType);
 		log.info("[done] took " + (System.currentTimeMillis() - start) + "ms");
 
 		Future<?> f1 = pool.submit(new Runnable() {
 			@Override
 			public void run() {
 				try {
-					uploadBulk(tripleStats.objectProps, "TMP_RELATIONS", session, connection);
+					uploadBulk(tripleStats.objectProps, "TMP_RELATIONS",
+							session, connection);
 				} catch (Exception e) {
 					log.log(Level.SEVERE, PostgresKB.class.getName(), e);
 				}
 			}
 		});
-		
+
 		Future<?> f2 = pool.submit(new Runnable() {
 			@Override
 			public void run() {
 				try {
-					uploadBulk(tripleStats.datatypeProps, "TMP_SYMBOLS", session, connection);
+					uploadBulk(tripleStats.datatypeProps, "TMP_SYMBOLS",
+							session, connection);
 				} catch (Exception e) {
 					log.log(Level.SEVERE, PostgresKB.class.getName(), e);
 				}
 			}
 		});
-		
+
 		f1.get();
 		f2.get();
-		
+
 		Future<?> f3 = pool.submit(new Runnable() {
 			@Override
 			public void run() {
@@ -997,7 +1015,7 @@ public class PostgresKB implements KnowledgeBase {
 				}
 			}
 		});
-		
+
 		Future<?> f4 = pool.submit(new Runnable() {
 			@Override
 			public void run() {
@@ -1008,10 +1026,10 @@ public class PostgresKB implements KnowledgeBase {
 				}
 			}
 		});
-		
+
 		f3.get();
 		f4.get();
-		
+
 		Future<?> f5 = pool.submit(new Runnable() {
 			@Override
 			public void run() {
@@ -1022,7 +1040,7 @@ public class PostgresKB implements KnowledgeBase {
 				}
 			}
 		});
-		
+
 		Future<?> f6 = pool.submit(new Runnable() {
 			@Override
 			public void run() {
@@ -1033,34 +1051,34 @@ public class PostgresKB implements KnowledgeBase {
 				}
 			}
 		});
-		
+
 		f5.get();
 		f6.get();
-		
+
 		dropTMP();
 
 	}
-
-
 
 	private void storeResourceIndex() throws Exception {
 
 		log.info("Populating table: index_resources");
 		int subjects = connection.prepareStatement(
 				"INSERT INTO tmp_index_resources (uri) "
-						+ "SELECT DISTINCT s FROM tmp_relations").executeUpdate();
+						+ "SELECT DISTINCT s FROM tmp_relations")
+				.executeUpdate();
 
 		log.info("Added " + subjects + " subjects to table: index_resources");
 
 		subjects += connection.prepareStatement(
 				"INSERT INTO tmp_index_resources (uri) "
-						+ "SELECT DISTINCT p FROM tmp_relations").executeUpdate();
-		log.info("Added " + subjects
-				+ " predicates to index_resources");
+						+ "SELECT DISTINCT p FROM tmp_relations")
+				.executeUpdate();
+		log.info("Added " + subjects + " predicates to index_resources");
 
 		subjects += connection.prepareStatement(
 				"INSERT INTO tmp_index_resources (uri) "
-						+ "SELECT DISTINCT o FROM tmp_relations").executeUpdate();
+						+ "SELECT DISTINCT o FROM tmp_relations")
+				.executeUpdate();
 		log.info("Added " + subjects + " objects to index_resources");
 
 		subjects += connection.prepareStatement(
@@ -1080,13 +1098,11 @@ public class PostgresKB implements KnowledgeBase {
 						+ "SELECT DISTINCT uri FROM tmp_index_resources")
 				.executeUpdate();
 
-		log.info("Added " + subjects
-				+ " datatype subjects to index_resources");
-
+		log.info("Added " + subjects + " datatype subjects to index_resources");
 
 		log.info("Dropping tmp_index_resources");
 		connection.prepareStatement("DROP TABLE tmp_index_resources").execute();
-		
+
 		log.info("Finished population query for index_resources");
 		log.info("Committed population of index_resources");
 		log.info(" ... stored " + subjects + " resources.");
@@ -1103,8 +1119,8 @@ public class PostgresKB implements KnowledgeBase {
 
 	private void storeLiteralValues() throws SQLException {
 		final PreparedStatement cleanInsert = connection
-		.prepareStatement("INSERT INTO index_literals (literal, prefix) " +
-				"SELECT DISTINCT o as literal, h as prefix FROM tmp_symbols");
+				.prepareStatement("INSERT INTO index_literals (literal, prefix) "
+						+ "SELECT DISTINCT o as literal, h as prefix FROM tmp_symbols");
 		log.info("Populating index_literals");
 		int i = cleanInsert.executeUpdate();
 		cleanInsert.close();
@@ -1120,13 +1136,12 @@ public class PostgresKB implements KnowledgeBase {
 		final PreparedStatement stmt = connection
 				.prepareStatement("INSERT INTO relations "
 						+ " (subject, predicate, object) "
-						+ "SELECT A.index AS subject, B.index AS predicate, C.index AS object " +
-								"FROM index_resources A, index_resources B, index_resources C, tmp_relations D " +
-								"WHERE(A.uri = D.s AND B.uri = D.p AND C.uri = D.o) ");
+						+ "SELECT A.index AS subject, B.index AS predicate, C.index AS object "
+						+ "FROM index_resources A, index_resources B, index_resources C, tmp_relations D "
+						+ "WHERE(A.uri = D.s AND B.uri = D.p AND C.uri = D.o) ");
 
 		int updateCount = stmt.executeUpdate();
-		log.info("Added " + updateCount
-				+ " triples with object properties");
+		log.info("Added " + updateCount + " triples with object properties");
 	}
 
 	private void initDatatypePropertyValues() throws Exception {
@@ -1139,8 +1154,481 @@ public class PostgresKB implements KnowledgeBase {
 
 		int updateCount = stmt.executeUpdate();
 
-		log.info("Added " + updateCount
-				+ " triples with datatype properties");
+		log.info("Added " + updateCount + " triples with datatype properties");
+	}
+
+	public void calculateCardinalities() throws Exception {
+
+		connection.createStatement().executeUpdate(
+				"DELETE FROM TABLE SUBJECT_CARD_RELATIONS");
+		connection.createStatement().executeUpdate(
+				"DELETE FROM TABLE OBJECT_CARD_RELATIONS");
+		connection.commit();
+		log.info("cleared tables SUBJECT_CARD_RELATIONS, OBJECT_CARD_RELATIONS.");
+
+		final String query1 = "INSERT INTO SUBJECT_CARD_RELATIONS "
+				+ "  SELECT H.predicate, count(distinct H.subject),"
+				+ "         sum(H.C), sum(H.C)/count(distinct H.subject)"
+				+ "  FROM ( SELECT subject, predicate, count(*) AS C FROM RELATIONS"
+				+ "  GROUP BY subject, predicate) AS H GROUP BY H.predicate";
+
+		final String query2 = "INSERT INTO OBJECT_CARD_RELATIONS "
+				+ "  SELECT H.predicate, count(distinct H.object),"
+				+ "         sum(H.C), sum(H.C)/count(distinct H.object)"
+				+ "  FROM ( SELECT object, predicate, count(*) AS C FROM RELATIONS"
+				+ "  GROUP BY object, predicate) AS H GROUP BY H.predicate";
+		Statement statement = connection.createStatement();
+		statement.addBatch(query1);
+		statement.addBatch(query2);
+		statement.executeBatch();
+		statement.close();
+		connection.commit();
+	}
+
+	private TIntDoubleHashMap subjectCardinialityCache = new TIntDoubleHashMap();
+
+	public double getSubjectCardinality(int p) throws Exception {
+
+		if (subjectCardinialityCache.isEmpty()) {
+			String sql = "SELECT predicate, ratio FROM subject_card_relations ";
+			Statement statement = connection.createStatement();
+			ResultSet rs = statement.executeQuery(sql);
+			while (rs.next()) {
+				subjectCardinialityCache.put(rs.getInt(1), rs.getDouble(2));
+			}
+			rs.close();
+			statement.close();
+		}
+
+		return subjectCardinialityCache.get(p);
+	}
+
+	public void calculateMarkovChain(int[] blackListedProperties,
+			int sampleCount) throws Exception {
+		final TObjectIntHashMap<String> graph1 = new TObjectIntHashMap<String>();
+
+		connection.createStatement().executeUpdate(
+				"DELETE FROM TABLE markov_chain");
+		connection.commit();
+		log.info("cleared table markov_chain.");
+
+		Statement statement = connection.createStatement();
+		statement.executeBatch();
+
+		final PreparedStatement pstmt = connection
+				.prepareStatement("SELECT * FROM classifications WHERE instance = ?");
+		// p != 10531131 && p != 9300878
+		TIntHashSet blacklist = new TIntHashSet(blackListedProperties);
+
+		for (int cluster : getClusters()) {
+			RemoteCursor rs1 = getInstancesOfTypes(cluster, sampleCount);
+			log.info("Received instances for clusters.");
+			TIntHashSet instances = new TIntHashSet();
+			while (rs1.next()) {
+				instances.add(rs1.getInt(1));
+			}
+			rs1.close();
+
+			RemoteCursor rs2 = getOutgoingRelations(instances.toArray());
+			log.info("Received outgoing links instances.");
+			while (rs2.next()) {
+				int s = rs2.getInt(1);
+				int p = rs2.getInt(2);
+				int o = rs2.getInt(3);
+				if (!blacklist.contains(p)) {
+					pstmt.setInt(1, o);
+					ResultSet rs = pstmt.executeQuery();
+					log.info(s + " received types of link's object: " + o);
+					while (rs.next()) {
+						int type = rs.getInt(2);
+
+						graph1.adjustOrPutValue(
+								String.format("%s;%s;%s", cluster, p, type), 1,
+								1);
+
+					}
+					rs.close();
+				}
+			}
+		}
+
+		// serializeMarkovChain(graph1, new File($SCOOBIE_HOME + "results/"+
+		// $DATABASE + "/markov_chain_" + limit + ".dot"));
+		pstmt.close();
+
+		connection.setAutoCommit(false);
+		final PreparedStatement pstmt1 = connection
+				.prepareStatement("INSERT INTO markov_chain VALUES (?, ?, ?, ?)");
+
+		final TIntIntHashMap amount = new TIntIntHashMap();
+
+		graph1.forEachEntry(new TObjectIntProcedure<String>() {
+
+			@Override
+			public boolean execute(String a, int b) {
+				amount.adjustOrPutValue(Integer.parseInt(a.split(";")[0]), b, b);
+				return true;
+			}
+
+		});
+
+		graph1.forEachEntry(new TObjectIntProcedure<String>() {
+
+			@Override
+			public boolean execute(String a, int b) {
+				String[] spo = a.split(";");
+
+				try {
+
+					pstmt1.setInt(1, Integer.parseInt(spo[0]));
+					pstmt1.setInt(2, Integer.parseInt(spo[1]));
+					pstmt1.setInt(3, Integer.parseInt(spo[2]));
+					pstmt1.setDouble(4,
+							((double) b) / amount.get(Integer.parseInt(spo[0])));
+					pstmt1.executeUpdate();
+
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				return true;
+			}
+		});
+
+		connection.commit();
+		pstmt1.close();
+
+	}
+
+	private HashMap<String, ArrayList<String>> markovChainCache = new HashMap<String, ArrayList<String>>();
+
+	public double getMarkovProbability(int subject, int predicate, int object)
+			throws Exception {
+
+		ResultSet resultSet = connection.createStatement().executeQuery(
+				"SELECT probability FROM markov_chain WHERE (subject = "
+						+ subject + " AND predicate = " + predicate
+						+ " AND object = " + object + ")");
+		try {
+			double p = 0.0;
+			while (resultSet.next()) {
+				p = resultSet.getDouble(1);
+			}
+			return p;
+		} finally {
+			resultSet.close();
+		}
+	}
+
+	public List<double[]> getMaxMarkovProbability(int subject, int object, int k)
+			throws Exception {
+
+		if (markovChainCache.isEmpty()) {
+			Statement stmt = connection.createStatement();
+			ResultSet rs = stmt
+					.executeQuery("SELECT * FROM markov_chain ORDER BY subject, object, probability DESC");
+			while (rs.next()) {
+				int s = rs.getInt(1);
+				int o = rs.getInt(3);
+				String key = String.format("%s;%s", s, o);
+				int p = rs.getInt(2);
+				double w = rs.getDouble(4);
+
+				ArrayList<String> list = markovChainCache.get(key);
+				if (list == null) {
+					list = new ArrayList<String>();
+					markovChainCache.put(key, list);
+				}
+				list.add(String.format(Locale.ENGLISH, "%s;%1.5f", p, w));
+			}
+			rs.close();
+			stmt.close();
+		}
+
+		List<double[]> l = new ArrayList<double[]>(k);
+		ArrayList<String> list = markovChainCache.get(String.format("%s;%s",
+				subject, object));
+		if (list != null) {
+			for (int i = 0; i < Math.min(list.size(), k); i++) {
+				String[] v = list.get(i).split(";");
+				double[] d = new double[2];
+				d[0] = Integer.parseInt(v[0]);
+				d[1] = Double.parseDouble(v[1]);
+				l.add(d);
+			}
+		}
+		return l;
+
+	}
+
+	public TIntObjectHashMap<TIntObjectHashMap<double[]>> getCoverageAmbiguity()
+			throws Exception {
+
+		final String SELECT_COVERAGE_AMBIGUITY = "SELECT C.attribute, C.coverage, A.avg_references FROM ( "
+				+ "SELECT S.predicate AS attribute, (count(DISTINCT S.subject) / avg(HT.count)) AS coverage "
+				+ "FROM relations R, symbols S, histogram_types HT "
+				+ "WHERE ( HT.type = R.object AND S.subject = R.subject AND R.object = ?) "
+				+ "GROUP BY S.predicate ) "
+				+ "C, AMBIGUITY_SYMBOLS A "
+				+ "WHERE ( A.attribute = C.attribute )";
+
+		TIntObjectHashMap<TIntObjectHashMap<double[]>> result = new TIntObjectHashMap<TIntObjectHashMap<double[]>>();
+
+		PreparedStatement stmt = connection
+				.prepareStatement(SELECT_COVERAGE_AMBIGUITY);
+
+		for (int typeIndex : getClusters()) {
+
+			TIntObjectHashMap<double[]> propertyValues = new TIntObjectHashMap<double[]>();
+			stmt.setInt(1, typeIndex);
+
+			ResultSet rs = stmt.executeQuery();
+			while (rs.next()) {
+				int propery = rs.getInt(1);
+				double coverage = rs.getDouble(2);
+				double ambiguity = rs.getDouble(3);
+				propertyValues.put(propery,
+						new double[] { coverage, ambiguity });
+			}
+			rs.close();
+
+			result.put(typeIndex, propertyValues);
+		}
+		stmt.close();
+
+		return result;
+	}
+
+	public void calculateProperNameStatistics(TextCorpus corpus, Pipeline pipe)
+			throws Exception {
+
+		connection.createStatement().executeUpdate(
+				"DELETE FROM TABLE proper_noun_rating");
+		connection.commit();
+
+		final TIntDoubleHashMap propertyIDF = corpus.getDocumentFrequency(pipe);
+
+		final TIntObjectHashMap<TIntObjectHashMap<double[]>> typePropertyCoverageAmbiguity = getCoverageAmbiguity();
+
+		final String sql = "INSERT INTO proper_noun_rating VALUES (?,?,?,?,?,?)";
+
+		final PreparedStatement pstmt = connection.prepareStatement(sql);
+
+		typePropertyCoverageAmbiguity
+				.forEachEntry(new TIntObjectProcedure<TIntObjectHashMap<double[]>>() {
+					@Override
+					public boolean execute(
+							final int type,
+							TIntObjectHashMap<double[]> propertyCoverageAmbiguity) {
+
+						propertyCoverageAmbiguity
+								.forEachEntry(new TIntObjectProcedure<double[]>() {
+
+									@Override
+									public boolean execute(int property,
+											double[] coverageAmbiguity) {
+
+										double idf = propertyIDF.get(property);
+
+										try {
+											pstmt.setInt(1, type);
+											pstmt.setInt(2, property);
+											pstmt.setDouble(
+													3,
+													coverageAmbiguity[0]
+															/ coverageAmbiguity[1]
+															* idf);
+											pstmt.setDouble(4,
+													coverageAmbiguity[0]);
+											pstmt.setDouble(5,
+													coverageAmbiguity[1]);
+											pstmt.setDouble(6, idf);
+											pstmt.executeUpdate();
+										} catch (SQLException e) {
+											e.printStackTrace();
+										}
+
+										return true;
+									}
+								});
+
+						return true;
+					}
+				});
+
+		pstmt.close();
+
+	}
+
+	/**
+	 * @param kb
+	 * @return
+	 * @throws Exception
+	 * @throws SQLException
+	 */
+	public DoubleMatrix getTypeCorrelations(int samples) throws Exception {
+		Set<Integer> types = new HashSet<Integer>();
+		RemoteCursor rs = getRDFTypes();
+		while (rs.next()) {
+			types.add(rs.getInt(1));
+		}
+		rs.close();
+		log.info("Retrieved " + types.size() + " classes");
+
+		TIntHashSet instances = new TIntHashSet();
+		final DoubleMatrix data = new DoubleMatrix();
+		for (int type : types) {
+			RemoteCursor rs1 = getInstancesOfTypes(type, samples);
+			while (rs1.next()) {
+				instances.add(rs1.getInt(1));
+			}
+			rs1.close();
+		}
+		log.info("Calculated " + samples + " samples for " + types.size()
+				+ " classes");
+		HashMap<Integer, Set<Integer>> typeMap = new HashMap<Integer, Set<Integer>>();
+
+		RemoteCursor rs2 = getRDFTypesForInstances(instances.toArray());
+		while (rs2.next()) {
+
+			Set<Integer> typeSet = typeMap.get(rs2.getInt(1));
+			if (typeSet == null) {
+				typeSet = new HashSet<Integer>();
+				typeMap.put(rs2.getInt(1), typeSet);
+			}
+			typeSet.add(rs2.getInt(2));
+		}
+		rs2.close();
+
+		for (Entry<Integer, Set<Integer>> e : typeMap.entrySet()) {
+			for (int i1 : e.getValue()) {
+				for (int i2 : e.getValue()) {
+					double d = data.get(i1, i2);
+					data.add(i1, i2, d + 1.0);
+				}
+			}
+		}
+		log.info("Populated matrix with cooccuring types of sample instances");
+
+		return data;
+	}
+
+	public void clusterCorrelatingClasses(int samples, double biasThreshold,
+			double pruningThreshold) throws Exception {
+
+		connection.createStatement().executeUpdate(
+				"DELETE FROM TABLE type_clusters");
+		connection.commit();
+
+		final DoubleMatrix data = getTypeCorrelations(samples);
+		log.info("Calculating covariances");
+		final DoubleMatrix2D cov = data.covarianceMatrix();
+		log.info("Calculating correlations");
+		final DoubleMatrix2D cor = Statistic.correlation(cov);
+		log.info("Start hierarchical clustering");
+		DoubleMatrix2D hMatrix = data.hierarchicalLabeledClustering(cor,
+				biasThreshold, pruningThreshold);
+
+		double maxValue = 0;
+		int bestLabel = 0;
+		TIntHashSet clusterValues;
+
+		TIntHashSet globalClusteredValues = new TIntHashSet();
+
+		for (int row = 0; row < hMatrix.rows(); row++) {
+			DoubleMatrix1D projectedColumn = hMatrix.viewRow(row);
+
+			clusterValues = new TIntHashSet();
+			maxValue = -1;
+			bestLabel = -1;
+
+			for (int col = 0; col < hMatrix.columns(); col++) {
+				if (projectedColumn.get(col) > 0) {
+					clusterValues.add(data.getColKeys()[col]);
+					globalClusteredValues.add(data.getColKeys()[col]);
+					if (projectedColumn.get(col) > maxValue) {
+						maxValue = projectedColumn.get(col);
+						bestLabel = data.getColKeys()[col];
+					}
+				}
+			}
+
+			for (int type : clusterValues.toArray()) {
+				connection.createStatement().executeUpdate(
+						"INSERT INTO type_clusters VALUES (" + type + ", "
+								+ bestLabel + ")");
+				log.info("Clustering " + getURI(type) + " as "
+						+ getURI(bestLabel));
+			}
+		}
+
+		RemoteCursor rs = getRDFTypes();
+		while (rs.next()) {
+			int type = rs.getInt(1);
+			if (!globalClusteredValues.contains(type)) {
+				connection.createStatement().executeUpdate(
+						"INSERT INTO type_clusters VALUES (" + type + ", "
+								+ type + ")");
+				log.info("Clustering " + getURI(type) + " as " + getURI(type));
+			}
+		}
+		rs.close();
+
+		connection.commit();
+	}
+	
+
+	public void calculateRegexDistributions(String[] regexs) throws Exception {
+		
+
+		connection.createStatement().executeUpdate(
+				"DELETE FROM TABLE literals_regex_distribution");
+		connection.commit();
+		
+		
+		for (String regex : regexs) {
+			// regex = "([1-2][0-9][0-9][0-9])\\-([0-2][0-9])\\-([0-9][0-9])";
+
+			String sql = "INSERT INTO literals_regex_distribution "
+					+ " ("
+					+ "SELECT '"+regex+"', H.P, H.C*1.0 / count "
+					+ "FROM ( "
+					+ "SELECT DISTINCT predicate AS P, count(DISTINCT object) AS C "
+					+ "FROM index_literals, symbols "
+					+ "WHERE literal ~ '"
+					+ regex
+					+ "' AND index = symbols.object GROUP BY predicate) as H, histogram_symbols "
+					+ "WHERE H.P = predicate AND H.C*1.0 / count > 0.9 )";
+			log.info(sql);
+			connection.createStatement().executeUpdate(sql);
+		}
+		connection.commit();
+	}
+
+	public TIntDoubleHashMap getDatatypePropertiesForRegex(String regex) throws Exception {
+		String sql = "SELECT * FROM literals_regex_distribution WHERE regex = '"
+				+ regex + "'";
+		TIntDoubleHashMap result = new TIntDoubleHashMap();
+		ResultSet rs = connection.createStatement().executeQuery(sql);
+		while (rs.next()) {
+			result.put(rs.getInt(2), rs.getDouble(3));
+		}
+		rs.close();
+
+		return result;
+	}
+
+	public String[] getRegexs() throws Exception {
+		ArrayList<String> regexs = new ArrayList<String>();
+		
+		String sql = "SELECT DISTINCT regex FROM literals_regex_distribution";
+		ResultSet rs = connection.createStatement().executeQuery(sql);
+		while (rs.next()) {
+			regexs.add(rs.getString(1));
+		}
+		rs.close();
+
+		return regexs.toArray(new String[regexs.size()]);
+		
 	}
 
 }

@@ -51,10 +51,10 @@ import cern.colt.matrix.linalg.SingularValueDecomposition;
 import cern.jet.stat.Descriptive;
 import cern.jet.stat.Probability;
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.preprocessor.HierarchicalClustering;
-import de.dfki.km.perspecting.obie.preprocessor.HierarchicalClustering.Cluster;
-import de.dfki.km.perspecting.obie.preprocessor.HierarchicalClustering.Leaf;
-import de.dfki.km.perspecting.obie.preprocessor.HierarchicalClustering.Traversal;
+import de.dfki.km.perspecting.obie.transducer.model.HierarchicalClustering;
+import de.dfki.km.perspecting.obie.transducer.model.HierarchicalClustering.Cluster;
+import de.dfki.km.perspecting.obie.transducer.model.HierarchicalClustering.Leaf;
+import de.dfki.km.perspecting.obie.transducer.model.HierarchicalClustering.Traversal;
 
 /**
  * 

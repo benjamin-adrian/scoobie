@@ -25,7 +25,6 @@ package de.dfki.km.perspecting.obie.experiments;
 /**
  * 
  */
-import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
@@ -42,13 +41,11 @@ import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.connection.PostgresKB;
 import de.dfki.km.perspecting.obie.corpus.BBCMusicCorpus;
 import de.dfki.km.perspecting.obie.corpus.BBCNatureCorpus;
-import de.dfki.km.perspecting.obie.corpus.TextCorpus;
 import de.dfki.km.perspecting.obie.corpus.WikipediaCorpus;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.Scoobie;
 import de.dfki.km.perspecting.obie.model.Token;
 import de.dfki.km.perspecting.obie.model.TokenSequence;
-import de.dfki.km.perspecting.obie.preprocessor.ProperNameMining;
 import de.dfki.km.perspecting.obie.transducer.LanguageIdentification;
 import de.dfki.km.perspecting.obie.transducer.POSTagging;
 import de.dfki.km.perspecting.obie.transducer.ProperNameRecognition;
@@ -142,24 +139,27 @@ public class ProperNameExperiment {
 	@Test
 	public void testOnDBpedia() throws Exception {
 		setUp($DATABASE_SERVER_PC_4327, $DATABASE_DBPEDIA_en2);
-		ProperNameMining pn = new ProperNameMining(new WikipediaCorpus(), pipeline);
-		pn.train();
+		
+		kb.calculateProperNameStatistics(new WikipediaCorpus(), pipeline);
+		
 		pool.close();
 	}
 	
 	@Test
 	public void testOnBBCNature() throws Exception {
 		setUp($DATABASE_SERVER_LOCALHOST, $DATABASE_BBC_WILDLIFE);
-		ProperNameMining pn = new ProperNameMining(new BBCNatureCorpus(), pipeline);
-		pn.train();
+		
+		kb.calculateProperNameStatistics(new BBCNatureCorpus(), pipeline);
+		
 		pool.close();
 	}
 	
 	@Test
 	public void testOnBBCMusic() throws Exception {
 		setUp($DATABASE_SERVER_LOCALHOST, $DATABASE_BBC_MUSIC);
-		ProperNameMining pn = new ProperNameMining(new BBCMusicCorpus(),  pipeline);
-		pn.train();
+		
+		kb.calculateProperNameStatistics(new BBCMusicCorpus(), pipeline);
+		
 		pool.close();
 	}
 
