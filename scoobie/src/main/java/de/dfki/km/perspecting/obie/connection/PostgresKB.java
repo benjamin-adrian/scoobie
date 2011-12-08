@@ -713,12 +713,6 @@ public class PostgresKB implements KnowledgeBase {
 	}
 
 	@Override
-	protected void finalize() throws Throwable {
-		connection.close();
-		super.finalize();
-	}
-
-	@Override
 	public int[] getClusters() throws Exception {
 		String sql = "SELECT DISTINCT cluster FROM type_clusters";
 		TIntHashSet clusters = new TIntHashSet();
@@ -897,7 +891,6 @@ public class PostgresKB implements KnowledgeBase {
 		connection.commit();
 		createIndexes();
 		connection.commit();
-		connection.close();
 	}
 
 	protected void createIndexes() throws Exception {
