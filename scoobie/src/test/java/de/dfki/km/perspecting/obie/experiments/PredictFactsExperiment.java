@@ -47,7 +47,7 @@ import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.connection.PostgresKB;
-import de.dfki.km.perspecting.obie.connection.ResultSetCallback;
+import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
 import de.dfki.km.perspecting.obie.workflow.Pipeline;
 
@@ -117,21 +117,21 @@ public class PredictFactsExperiment {
 
 		int limit = 10;
 		for (int cluster : kb.getClusters()) {
-			ResultSetCallback rs1 = kb.getInstancesOfTypes(cluster, limit);
+			ResultSetCursor rs1 = kb.getInstancesOfTypes(cluster, limit);
 			System.out.println("Received instances for clusters.");
 			TIntHashSet instances = new TIntHashSet();
-			while (rs1.getRs().next()) {
-				instances.add(rs1.getRs().getInt(1));
+			while (rs1.next()) {
+				instances.add(rs1.getInt(1));
 			}
 			rs1.close();
 
-			ResultSetCallback rs2 = kb
+			ResultSetCursor rs2 = kb
 					.getOutgoingRelations(instances.toArray());
 			System.out.println("Received outgoing links instances.");
-			while (rs2.getRs().next()) {
-				int s = rs2.getRs().getInt(1);
-				int p = rs2.getRs().getInt(2);
-				int o = rs2.getRs().getInt(3);
+			while (rs2.next()) {
+				int s = rs2.getInt(1);
+				int p = rs2.getInt(2);
+				int o = rs2.getInt(3);
 				if (p != 10531131 && p != 9300878) {
 					pstmt.setInt(1, o);
 					ResultSet rs = pstmt.executeQuery();

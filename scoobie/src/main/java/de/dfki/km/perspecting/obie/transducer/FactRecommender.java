@@ -38,7 +38,7 @@ import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.doublealgo.Statistic;
 import cern.colt.matrix.linalg.Algebra;
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCallback;
+import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
 import de.dfki.km.perspecting.obie.model.RDFEdge;
@@ -87,14 +87,14 @@ public class FactRecommender extends Transducer {
 
 		TIntObjectHashMap<TIntHashSet> dClassifications = new TIntObjectHashMap<TIntHashSet>();
 
-		ResultSetCallback rs = kb.getRDFTypesForInstances(instances.toArray());
-		while (rs.getRs().next()) {
-			TIntHashSet types = dClassifications.get(rs.getRs().getInt(1));
+		ResultSetCursor rs = kb.getRDFTypesForInstances(instances.toArray());
+		while (rs.next()) {
+			TIntHashSet types = dClassifications.get(rs.getInt(1));
 			if (types == null) {
 				types = new TIntHashSet();
-				dClassifications.put(rs.getRs().getInt(1), types);
+				dClassifications.put(rs.getInt(1), types);
 			}
-			types.add(rs.getRs().getInt(2));
+			types.add(rs.getInt(2));
 		}
 
 		for (int i : instances.toArray()) {
@@ -164,14 +164,14 @@ public class FactRecommender extends Transducer {
 
 		TIntObjectHashMap<TIntHashSet> dClassifications = new TIntObjectHashMap<TIntHashSet>();
 
-		ResultSetCallback rs = kb.getRDFTypesForInstances(instances.toArray());
-		while (rs.getRs().next()) {
-			TIntHashSet types = dClassifications.get(rs.getRs().getInt(1));
+		ResultSetCursor rs = kb.getRDFTypesForInstances(instances.toArray());
+		while (rs.next()) {
+			TIntHashSet types = dClassifications.get(rs.getInt(1));
 			if (types == null) {
 				types = new TIntHashSet();
-				dClassifications.put(rs.getRs().getInt(1), types);
+				dClassifications.put(rs.getInt(1), types);
 			}
-			types.add(rs.getRs().getInt(2));
+			types.add(rs.getInt(2));
 		}
 
 		for (int i : instances.toArray()) {

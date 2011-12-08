@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCallback;
+import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.SemanticEntity;
 import de.dfki.km.perspecting.obie.model.TextPointer;
@@ -66,14 +66,14 @@ public class RDFLiteralSpotting extends Transducer {
 			log.info("Request Symbols Candidates");
 
 			long start = System.currentTimeMillis();
-			final ResultSetCallback values = kb.getDatatypePropertyValues(
+			final ResultSetCursor values = kb.getDatatypePropertyValues(
 					datatypePropertyFilter.toArray(), suffixes
 							.getCommonPrefixStrings());
 			log.info("Request Symbols Candidates took: "
 					+ (System.currentTimeMillis() - start));
 			start = System.currentTimeMillis();
 			log.info("Starting SuffixArrayComparison");
-			final List<TextPointer> symbols = suffixes.compare(values.getRs());
+			final List<TextPointer> symbols = suffixes.compare(values);
 			log.info("SuffixArrayComparison took: "
 					+ (System.currentTimeMillis() - start));
 

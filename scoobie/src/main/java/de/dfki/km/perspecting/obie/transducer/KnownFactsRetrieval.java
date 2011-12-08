@@ -28,7 +28,7 @@ import gnu.trove.TIntHashSet;
 import java.util.logging.Logger;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCallback;
+import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.RDFEdge;
 import de.dfki.km.perspecting.obie.model.SemanticEntity;
@@ -68,12 +68,12 @@ public class KnownFactsRetrieval extends Transducer {
 //			}
 //		}
 
-		ResultSetCallback out = kb
+		ResultSetCursor out = kb
 				.getOutgoingRelations(instances.toArray());
-		while (out.getRs().next()) {
-			int s = out.getRs().getInt(1);
-			int p = out.getRs().getInt(2);
-			int o = out.getRs().getInt(3);
+		while (out.next()) {
+			int s = out.getInt(1);
+			int p = out.getInt(2);
+			int o = out.getInt(3);
 			
 			document.getGraph().addEdge(new RDFEdge(p), s, o);
 

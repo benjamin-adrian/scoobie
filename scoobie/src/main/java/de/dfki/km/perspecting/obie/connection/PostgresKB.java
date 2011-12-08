@@ -116,7 +116,7 @@ public class PostgresKB implements KnowledgeBase {
 	}
 
 	@Override
-	public ResultSetCallback getDatatypePropertyValues(
+	public RemoteCursor getDatatypePropertyValues(
 			int datatypePropertyIndex, int rdfType) throws Exception {
 		String sql = "SELECT DISTINCT index_literals.literal, index_literals.index, symbols.belief "
 				+ "FROM index_literals, symbols, relations "
@@ -130,7 +130,7 @@ public class PostgresKB implements KnowledgeBase {
 
 			stmtGetTypedDatatypePropertyValues.setInt(1, datatypePropertyIndex);
 			stmtGetTypedDatatypePropertyValues.setInt(2, rdfType);
-			return new ResultSetCallback(executeQuery(
+			return new ResultSetCursor(executeQuery(
 					stmtGetTypedDatatypePropertyValues, sql));
 
 		} catch (SQLException e) {
@@ -141,7 +141,7 @@ public class PostgresKB implements KnowledgeBase {
 	}
 
 	@Override
-	public ResultSetCallback getDatatypePropertyValues(
+	public ResultSetCursor getDatatypePropertyValues(
 			int[] datatypePropertyFilter, int[] prefixes) throws Exception {
 		StringBuilder sql = new StringBuilder();
 
@@ -181,7 +181,7 @@ public class PostgresKB implements KnowledgeBase {
 				stmtGetDatatypePropertyValues.setInt(++paramIndex, p);
 			}
 
-			return new ResultSetCallback(executeQuery(
+			return new ResultSetCursor(executeQuery(
 					stmtGetDatatypePropertyValues, sql.toString()));
 
 		} catch (SQLException e) {
@@ -191,7 +191,7 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	public ResultSetCallback getInstanceCandidates(
+	public ResultSetCursor getInstanceCandidates(
 			Map<Integer, Set<Integer>> literalKeys) throws Exception {
 
 		final StringBuilder literalFilter = new StringBuilder();
@@ -224,7 +224,7 @@ public class PostgresKB implements KnowledgeBase {
 
 			final ResultSet rs = executeQuery(stmtGetInstanceCandidates, sql);
 
-			return new ResultSetCallback(rs);
+			return new ResultSetCursor(rs);
 
 		} catch (SQLException e) {
 			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
@@ -233,7 +233,7 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	public ResultSetCallback dbSort(List<CharSequence> index, int maxLength)
+	public ResultSetCursor dbSort(List<CharSequence> index, int maxLength)
 			throws Exception {
 
 		String prefix = "SELECT * FROM ( VALUES ";
@@ -261,7 +261,7 @@ public class PostgresKB implements KnowledgeBase {
 			}
 
 			ResultSet rs = executeQuery(pstmt, sql);
-			return new ResultSetCallback(rs);
+			return new ResultSetCursor(rs);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
 					+ sql, e);
@@ -467,7 +467,7 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	public ResultSetCallback getOutgoingRelations(int[] instances)
+	public ResultSetCursor getOutgoingRelations(int[] instances)
 			throws Exception {
 		final StringBuilder b = new StringBuilder();
 		for (int i : instances) {
@@ -482,7 +482,7 @@ public class PostgresKB implements KnowledgeBase {
 		try {
 			PreparedStatement pstmt = connection.prepareStatement(sql);
 			ResultSet rs = executeQuery(pstmt, sql);
-			return new ResultSetCallback(rs);
+			return new ResultSetCursor(rs);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
 					+ sql, e);
@@ -490,7 +490,7 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	public ResultSetCallback getIncomingRelations(int[] instances)
+	public ResultSetCursor getIncomingRelations(int[] instances)
 			throws Exception {
 		StringBuilder b = new StringBuilder();
 		for (int i : instances) {
@@ -516,7 +516,7 @@ public class PostgresKB implements KnowledgeBase {
 		try {
 			PreparedStatement pstmt = connection.prepareStatement(sql);
 			ResultSet rs = executeQuery(pstmt, sql);
-			return new ResultSetCallback(rs);
+			return new ResultSetCursor(rs);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
 					+ sql, e);
@@ -605,7 +605,7 @@ public class PostgresKB implements KnowledgeBase {
 	int typeIndex = -1;
 
 	@Override
-	public ResultSetCallback getRDFTypesForInstances(int[] subjects)
+	public ResultSetCursor getRDFTypesForInstances(int[] subjects)
 			throws Exception {
 
 		if (typeIndex == -1) {
@@ -629,7 +629,7 @@ public class PostgresKB implements KnowledgeBase {
 
 			ResultSet rs = executeQuery(pstmt, sql);
 
-			return new ResultSetCallback(rs);
+			return new ResultSetCursor(rs);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
 					+ sql, e);
@@ -640,7 +640,7 @@ public class PostgresKB implements KnowledgeBase {
 	PreparedStatement typePstmt = null;
 
 	@Override
-	public ResultSetCallback getInstancesOfTypes(int type, int count)
+	public ResultSetCursor getInstancesOfTypes(int type, int count)
 			throws Exception {
 
 		if (typeIndex == -1) {
@@ -656,7 +656,7 @@ public class PostgresKB implements KnowledgeBase {
 			typePstmt.setInt(1, type);
 			ResultSet rs = executeQuery(typePstmt, sql);
 
-			return new ResultSetCallback(rs);
+			return new ResultSetCursor(rs);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
 					+ sql, e);
@@ -665,7 +665,7 @@ public class PostgresKB implements KnowledgeBase {
 	}
 
 	@Override
-	public ResultSetCallback getRDFTypes() throws Exception {
+	public ResultSetCursor getRDFTypes() throws Exception {
 		
 		if (typeIndex == -1) {
 			typeIndex = getUriIndex(RDF.TYPE.toString());
@@ -677,7 +677,7 @@ public class PostgresKB implements KnowledgeBase {
 			PreparedStatement pstmt = connection.prepareStatement(sql);
 			ResultSet rs = executeQuery(pstmt, sql);
 
-			return new ResultSetCallback(rs);
+			return new ResultSetCursor(rs);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
 					+ sql, e);
@@ -685,12 +685,12 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	public ResultSetCallback getLiteralLengthHistogram() throws Exception {
+	public RemoteCursor getLiteralLengthHistogram() throws Exception {
 		String sql = "SELECT LENGTH(literal), COUNT(LENGTH(literal)) FROM INDEX_LITERALS GROUP BY LENGTH(literal) ORDER BY LENGTH(literal)";
 		try {
 			PreparedStatement pstmt1 = connection.prepareStatement(sql);
 			ResultSet rs = executeQuery(pstmt1, sql);
-			return new ResultSetCallback(rs);
+			return new ResultSetCursor(rs);
 		} catch (Exception e) {
 			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
 					+ sql, e);

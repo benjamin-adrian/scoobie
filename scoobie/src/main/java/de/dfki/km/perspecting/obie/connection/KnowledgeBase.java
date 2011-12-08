@@ -24,7 +24,6 @@
 
 package de.dfki.km.perspecting.obie.connection;
 
-import java.io.File;
 import java.io.InputStream;
 import java.net.URI;
 import java.sql.Connection;
@@ -70,7 +69,7 @@ public interface KnowledgeBase {
 	 * @param datatypePropertyFilter List of datatype properties
 	 * @param prefixes List of hashed literal prefixes
 	 **/
-	ResultSetCallback getDatatypePropertyValues(
+	ResultSetCursor getDatatypePropertyValues(
 			int[] datatypePropertyFilter, int[] prefixes)
 			throws Exception;
 
@@ -81,7 +80,7 @@ public interface KnowledgeBase {
 	 * 
 	 * @param symbols Datatype property value pairs
 	 */
-	ResultSetCallback getInstanceCandidates(
+	ResultSetCursor getInstanceCandidates(
 			Map<Integer, Set<Integer>> symbols) throws Exception;
 
 	/**
@@ -160,7 +159,7 @@ public interface KnowledgeBase {
 	 * @return
 	 * @throws Exception
 	 */
-	ResultSetCallback getOutgoingRelations(int[] instances)
+	ResultSetCursor getOutgoingRelations(int[] instances)
 			throws Exception;
 
 	/**
@@ -183,7 +182,7 @@ public interface KnowledgeBase {
 	 * @return
 	 * @throws Exception
 	 */
-	ResultSetCallback getIncomingRelations(int[] instances)
+	ResultSetCursor getIncomingRelations(int[] instances)
 			throws Exception;
 
 
@@ -194,14 +193,14 @@ public interface KnowledgeBase {
 	 *            Index of instance
 	 * @return A {@link List} of {@link Integer} index values about types.
 	 */
-	ResultSetCallback getRDFTypesForInstances(int [] subjects)
+	ResultSetCursor getRDFTypesForInstances(int [] subjects)
 			throws Exception;
 	
 	/**
 	 * @return
 	 * @throws Exception
 	 */
-	ResultSetCallback getRDFTypes() throws Exception;
+	ResultSetCursor getRDFTypes() throws Exception;
 
 	/**
 	 * @param index
@@ -209,7 +208,7 @@ public interface KnowledgeBase {
 	 * @return
 	 * @throws Exception
 	 */
-	ResultSetCallback dbSort(List<CharSequence> index, int maxLength)
+	ResultSetCursor dbSort(List<CharSequence> index, int maxLength)
 			throws Exception;
 
 	/**
@@ -218,7 +217,7 @@ public interface KnowledgeBase {
 	 * @return
 	 * @throws Exception
 	 */
-	ResultSetCallback getDatatypePropertyValues(int datatypePropertyIndex,
+	RemoteCursor getDatatypePropertyValues(int datatypePropertyIndex,
 			int rdfType) throws Exception;
 
 	/**
@@ -227,7 +226,7 @@ public interface KnowledgeBase {
 	 * @return
 	 * @throws Exception
 	 */
-	ResultSetCallback getInstancesOfTypes(int type, int limit)
+	ResultSetCursor getInstancesOfTypes(int type, int limit)
 			throws Exception;
 
 

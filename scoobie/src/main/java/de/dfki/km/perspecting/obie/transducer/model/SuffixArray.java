@@ -37,7 +37,8 @@ import java.util.regex.Pattern;
 import com.ibm.icu.text.Collator;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCallback;
+import de.dfki.km.perspecting.obie.connection.RemoteCursor;
+import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
 import de.dfki.km.perspecting.obie.model.TextPointer;
 import de.dfki.km.perspecting.obie.model.Token;
 
@@ -199,10 +200,10 @@ public class SuffixArray {
 	}
 
 	protected void dbSort() throws Exception {
-		ResultSetCallback rs = ontology.dbSort(index, maxLength);
+		ResultSetCursor rs = ontology.dbSort(index, maxLength);
 		if (rs != null) {
-			while (rs.getRs().next()) {
-				index2.add(rs.getRs().getString(1));
+			while (rs.next()) {
+				index2.add(rs.getString(1));
 				// System.out.println(rs.getRs().getString(1).replaceAll("\n",
 				// " "));
 			}
@@ -398,7 +399,7 @@ public class SuffixArray {
 	 *         at least partly with the text.
 	 * @throws Exception
 	 */
-	public List<TextPointer> compare(final ResultSet rs) throws Exception {
+	public List<TextPointer> compare(final RemoteCursor rs) throws Exception {
 
 		final ArrayList<TextPointer> pairs = new ArrayList<TextPointer>();
 

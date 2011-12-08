@@ -25,22 +25,47 @@ package de.dfki.km.perspecting.obie.connection;
 
 import java.sql.ResultSet;
 
-public class ResultSetCallback {
+
+/**
+ * {@link RemoteCursor} implementation base don a {@link ResultSet}.
+ * 
+ * @author adrian
+ *
+ */
+public class ResultSetCursor implements RemoteCursor {
 
 	private final ResultSet rs;
 	
 	
-	public ResultSetCallback(ResultSet rs) {
+	public ResultSetCursor(ResultSet rs) {
 		this.rs = rs;
 	}
-	
-	
-	public ResultSet getRs() {
-		return rs;
-	}
-	
+		
 	public void close() throws Exception {
 		rs.close();
 	}
+
+
+	@Override
+	public boolean next() throws Exception {
+		return rs.next();
+	}
+
+
+	@Override
+	public int getInt(int index) throws Exception {
+		return rs.getInt(index);
+	}
 	
+	@Override
+	public double getDouble(int index) throws Exception {
+		return rs.getDouble(index);
+	}
+
+
+	@Override
+	public String getString(int index) throws Exception {
+		return rs.getString(index);
+	}
+		
 }

@@ -34,7 +34,7 @@ import java.util.TreeMap;
 import java.util.logging.Logger;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCallback;
+import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
 import de.dfki.km.perspecting.obie.model.RDFEdge;
@@ -411,12 +411,12 @@ public class EntityDisambiguation extends Transducer {
 
 		TIntHashSet newReferences = new TIntHashSet();
 
-		ResultSetCallback rs = kb.getIncomingRelations(objects);
+		ResultSetCursor rs = kb.getIncomingRelations(objects);
 
-		while (rs.getRs().next()) {
-			int subject = rs.getRs().getInt(1);
-			int predicate = rs.getRs().getInt(2);
-			int object = rs.getRs().getInt(3);
+		while (rs.next()) {
+			int subject = rs.getInt(1);
+			int predicate = rs.getInt(2);
+			int object = rs.getInt(3);
 
 			if (!graph.containsVertex(subject))
 				newReferences.add(subject);
@@ -437,17 +437,17 @@ public class EntityDisambiguation extends Transducer {
 	private TIntHashSet traverseForward(KnowledgeBase kb, int[] uriRefs,
 			DirectedGraph<Integer, RDFEdge> graph) throws Exception {
 
-		ResultSetCallback rs = kb.getOutgoingRelations(uriRefs);
+		ResultSetCursor rs = kb.getOutgoingRelations(uriRefs);
 
 		TIntHashSet newReferences = new TIntHashSet();
 
 		int type = kb
 				.getUriIndex("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
 
-		while (rs.getRs().next()) {
-			int subject = rs.getRs().getInt(1);
-			int predicate = rs.getRs().getInt(2);
-			int object = rs.getRs().getInt(3);
+		while (rs.next()) {
+			int subject = rs.getInt(1);
+			int predicate = rs.getInt(2);
+			int object = rs.getInt(3);
 
 			// means to add no links RDFS classes in this graph
 			if (predicate != type) {

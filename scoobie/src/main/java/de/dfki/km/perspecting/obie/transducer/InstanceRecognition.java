@@ -39,7 +39,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCallback;
+import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.SemanticEntity;
 import de.dfki.km.perspecting.obie.model.Token;
@@ -104,16 +104,16 @@ public class InstanceRecognition extends Transducer {
 			}
 
 			if (!valuePropertyMap.isEmpty()) {
-				final ResultSetCallback rs = kb
+				final ResultSetCursor rs = kb
 						.getInstanceCandidates(valuePropertyMap);
 
 				TIntHashSet subjects = new TIntHashSet();
 
-				while (rs.getRs().next()) {
-					int subjectIndex = rs.getRs().getInt(1);
-					int propertyIndex = rs.getRs().getInt(2);
-					int literalValueIndex = rs.getRs().getInt(3);
-					String subjectUri = rs.getRs().getString(4);
+				while (rs.next()) {
+					int subjectIndex = rs.getInt(1);
+					int propertyIndex = rs.getInt(2);
+					int literalValueIndex = rs.getInt(3);
+					String subjectUri = rs.getString(4);
 //					System.out.println(subjectUri + " "+ kb.getLiteral(literalValueIndex) + " " + literalValueIndex);
 					// literalsSubjectGraph.addEdge(edgeCount++,
 					// -literalValueIndex, subjectIndex);
@@ -210,14 +210,14 @@ public class InstanceRecognition extends Transducer {
 			int[] subjects,
 			HashMap<Integer, List<TokenSequence<SemanticEntity>>> subjectsLiterals)
 			throws Exception, SQLException {
-		final ResultSetCallback typeResults = ontology
+		final ResultSetCursor typeResults = ontology
 				.getRDFTypesForInstances(subjects);
 
 		HashMap<Integer, TIntHashSet> types = new HashMap<Integer, TIntHashSet>();
 
-		while (typeResults.getRs().next()) {
-			int subjectIndex = typeResults.getRs().getInt(1);
-			int typeIndex = typeResults.getRs().getInt(2);
+		while (typeResults.next()) {
+			int subjectIndex = typeResults.getInt(1);
+			int typeIndex = typeResults.getInt(2);
 
 			TIntHashSet set = types.get(subjectIndex);
 			if (set == null) {

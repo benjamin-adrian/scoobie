@@ -39,7 +39,7 @@ import java.util.Locale;
 import java.util.logging.Logger;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCallback;
+import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
 
 public class MarkovChain {
 
@@ -162,22 +162,22 @@ public class MarkovChain {
 		TIntHashSet blacklist = new TIntHashSet(blackListedProperties);
 
 		for (int cluster : kb.getClusters()) {
-			ResultSetCallback rs1 = kb
+			ResultSetCursor rs1 = kb
 					.getInstancesOfTypes(cluster, sampleCount);
 			log.info("Received instances for clusters.");
 			TIntHashSet instances = new TIntHashSet();
-			while (rs1.getRs().next()) {
-				instances.add(rs1.getRs().getInt(1));
+			while (rs1.next()) {
+				instances.add(rs1.getInt(1));
 			}
 			rs1.close();
 
-			ResultSetCallback rs2 = kb
+			ResultSetCursor rs2 = kb
 					.getOutgoingRelations(instances.toArray());
 			log.info("Received outgoing links instances.");
-			while (rs2.getRs().next()) {
-				int s = rs2.getRs().getInt(1);
-				int p = rs2.getRs().getInt(2);
-				int o = rs2.getRs().getInt(3);
+			while (rs2.next()) {
+				int s = rs2.getInt(1);
+				int p = rs2.getInt(2);
+				int o = rs2.getInt(3);
 				if (!blacklist.contains(p)) {
 					pstmt.setInt(1, o);
 					ResultSet rs = pstmt.executeQuery();

@@ -37,7 +37,7 @@ import cern.colt.matrix.DoubleMatrix1D;
 import cern.colt.matrix.DoubleMatrix2D;
 import cern.colt.matrix.doublealgo.Statistic;
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.ResultSetCallback;
+import de.dfki.km.perspecting.obie.connection.ResultSetCursor;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
 
 public class RDFTypeClustering {
@@ -64,9 +64,9 @@ public class RDFTypeClustering {
 	 */
 	public DoubleMatrix getTypeCorrelations() throws Exception {
 		Set<Integer> types = new HashSet<Integer>();
-		ResultSetCallback rs = kb.getRDFTypes();
-		while (rs.getRs().next()) {
-			types.add(rs.getRs().getInt(1));
+		ResultSetCursor rs = kb.getRDFTypes();
+		while (rs.next()) {
+			types.add(rs.getInt(1));
 		}
 		rs.close();
 		log.info("Retrieved " + types.size() + " classes");
@@ -74,9 +74,9 @@ public class RDFTypeClustering {
 		TIntHashSet instances = new TIntHashSet();
 		final DoubleMatrix data = new DoubleMatrix();
 		for (int type : types) {
-			ResultSetCallback rs1 = kb.getInstancesOfTypes(type, samples);
-			while (rs1.getRs().next()) {
-				instances.add(rs1.getRs().getInt(1));
+			ResultSetCursor rs1 = kb.getInstancesOfTypes(type, samples);
+			while (rs1.next()) {
+				instances.add(rs1.getInt(1));
 			}
 			rs1.close();
 		}
@@ -84,15 +84,15 @@ public class RDFTypeClustering {
 						+ " classes");
 		HashMap<Integer, Set<Integer>> typeMap = new HashMap<Integer, Set<Integer>>();
 
-		ResultSetCallback rs2 = kb.getRDFTypesForInstances(instances.toArray());
-		while (rs2.getRs().next()) {
+		ResultSetCursor rs2 = kb.getRDFTypesForInstances(instances.toArray());
+		while (rs2.next()) {
 
-			Set<Integer> typeSet = typeMap.get(rs2.getRs().getInt(1));
+			Set<Integer> typeSet = typeMap.get(rs2.getInt(1));
 			if (typeSet == null) {
 				typeSet = new HashSet<Integer>();
-				typeMap.put(rs2.getRs().getInt(1), typeSet);
+				typeMap.put(rs2.getInt(1), typeSet);
 			}
-			typeSet.add(rs2.getRs().getInt(2));
+			typeSet.add(rs2.getInt(2));
 		}
 		rs2.close();
 
@@ -157,9 +157,9 @@ public class RDFTypeClustering {
 			}
 		}
 		
-		ResultSetCallback rs = kb.getRDFTypes();
-		while(rs.getRs().next()) {
-			int type = rs.getRs().getInt(1);
+		ResultSetCursor rs = kb.getRDFTypes();
+		while(rs.next()) {
+			int type = rs.getInt(1);
 			if(!globalClusteredValues.contains(type)) {
 				conn.createStatement().executeUpdate(
 						"INSERT INTO type_clusters VALUES (" + type + ", "
