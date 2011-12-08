@@ -1,3 +1,5 @@
+--HSQLDB schema
+
 DROP TABLE IF EXISTS index_literals CASCADE;
 DROP TABLE IF EXISTS map_language CASCADE;
 DROP TABLE IF EXISTS tmp_map_language CASCADE;
@@ -26,20 +28,21 @@ DROP TABLE IF EXISTS type_clusters CASCADE;
 DROP TABLE IF EXISTS literals_regex_distribution CASCADE;
  
 CREATE TABLE index_literals (
-  index SERIAL PRIMARY KEY,
+  index int IDENTITY PRIMARY KEY,
   literal varchar(256) NOT NULL,
---  prefix varchar(8) NOT NULL
   prefix int NOT NULL
-);
-
-CREATE TABLE index_resources (
-  index SERIAL PRIMARY KEY,
-  uri varchar(256) NOT NULL UNIQUE
 );
 
 CREATE TABLE tmp_index_resources (
     uri varchar(256) 
 );
+
+
+CREATE TABLE index_resources (
+  index int IDENTITY PRIMARY KEY,
+  uri varchar(256) NOT NULL
+);
+
 
 CREATE TABLE relations (
   subject int NOT NULL,
@@ -77,15 +80,15 @@ CREATE TABLE tmp_symbols (
 
 CREATE TABLE SUBJECT_CARD_RELATIONS (
   predicate integer, 
-  count integer, 
-  sum numeric, 
+  "count" integer, 
+  "sum" numeric, 
   ratio numeric
 );
 	
 CREATE TABLE OBJECT_CARD_RELATIONS (
   predicate integer, 
-  count integer, 
-  sum numeric, 
+  "count" integer, 
+  "sum" numeric, 
   ratio numeric
 );
 
@@ -116,21 +119,20 @@ CREATE TABLE literals_regex_distribution(
   ratio float
 );
 
-CREATE OR REPLACE VIEW histogram_literals AS 
-  SELECT symbols.object AS literal, count(DISTINCT symbols.subject) AS count   
+CREATE VIEW histogram_literals AS 
+  SELECT symbols.object AS literal, count(DISTINCT symbols.subject) AS "count"   
     FROM symbols  
     GROUP BY symbols.object;
-    
 
-CREATE OR REPLACE VIEW ambiguity_symbols AS 
-  SELECT symbols.predicate AS attribute, avg(histogram_literals.count) AS avg_references 
+CREATE VIEW ambiguity_symbols AS 
+  SELECT symbols.predicate AS attribute, avg(histogram_literals."count") AS avg_references 
     FROM symbols, histogram_literals  
     WHERE histogram_literals.literal = symbols.object  
     GROUP BY symbols.predicate;
   
-
-CREATE OR REPLACE VIEW histogram_types AS 
-  SELECT r.object AS type, count(DISTINCT r.subject) AS count 
+    
+CREATE VIEW histogram_types AS 
+  SELECT r.object AS type, count(DISTINCT r.subject) AS "count" 
     FROM relations r 
     WHERE (
       r.predicate IN ( 
@@ -141,7 +143,7 @@ CREATE OR REPLACE VIEW histogram_types AS
     ) 
     GROUP BY r.object;
 
-CREATE OR REPLACE VIEW histogram_symbols AS 
+CREATE VIEW histogram_symbols AS 
   SELECT predicate, count(DISTINCT object) 
     FROM index_literals, symbols 
     WHERE ( index = symbols.object ) 

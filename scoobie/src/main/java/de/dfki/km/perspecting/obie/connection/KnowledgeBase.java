@@ -53,15 +53,6 @@ public interface KnowledgeBase {
 	public String getSession();
 
 	/**
-	 * Returns an open database connection.
-	 * 
-	 * @deprecated All database requests should be implemented by the
-	 *             {@link KnowledgeBase}.
-	 * @return connection to database
-	 */
-	// Connection getConnection();
-
-	/**
 	 * Returns a ResultSet filled with existing values of a datatype property.
 	 * 
 	 * @param datatypePropertyFilter
@@ -287,6 +278,6 @@ public interface KnowledgeBase {
 	
 	TIntDoubleHashMap getDatatypePropertiesForRegex(String regex) throws Exception;
 	
-	public String[] getRegexs() throws Exception;
+	String[] getRegexs() throws Exception;
 
 }

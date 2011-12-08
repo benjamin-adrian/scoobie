@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.sql.BatchUpdateException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -70,24 +71,28 @@ import de.dfki.km.perspecting.obie.workflow.Pipeline;
 
 public class PostgresKB implements KnowledgeBase {
 
-	private static final String INDEXSCHEME_SQL = "postgres/indexscheme.sql";
-
-	private static final String DBSCHEME_SQL = "postgres/dbscheme.sql";
-
 	private static final Logger log = Logger.getLogger(PostgresKB.class
 			.getName());
 
-	private final String session;
-
-	private final Connection connection;
-
-	private URI uri;
+	
+	protected String INDEXSCHEME_SQL = "postgres/indexscheme.sql";
+	protected String DBSCHEME_SQL = "postgres/dbscheme.sql";
+	protected String session;
+	protected Connection connection;
+	protected URI uri;
 
 	public PostgresKB(Connection connection, String session, URI uri)
+			throws Exception {
+		this(connection, session, uri, "postgres/dbscheme.sql", "postgres/indexscheme.sql");
+	}
+	
+	protected PostgresKB(Connection connection, String session, URI uri, String dbSchema, String indexSchema)
 			throws Exception {
 		this.uri = uri;
 		this.session = session;
 		this.connection = connection;
+		this.INDEXSCHEME_SQL = indexSchema;
+		this.DBSCHEME_SQL = dbSchema;
 	}
 
 	@Override
@@ -95,16 +100,11 @@ public class PostgresKB implements KnowledgeBase {
 		return uri;
 	}
 
-	// @Override
-	// public Connection getConnection() {
-	// return connection;
-	// }
-
 	public String getSession() {
 		return session;
 	}
 
-	private ResultSet executeQuery(String sql) throws Exception {
+	protected ResultSet executeQuery(String sql) throws Exception {
 		long start = System.currentTimeMillis();
 		try {
 			return connection.createStatement().executeQuery(sql);
@@ -118,7 +118,7 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	private ResultSet executeQuery(PreparedStatement stmt, String sql)
+	protected ResultSet executeQuery(PreparedStatement stmt, String sql)
 			throws Exception {
 		long start = System.currentTimeMillis();
 		try {
@@ -871,7 +871,7 @@ public class PostgresKB implements KnowledgeBase {
 			return 0;
 	}
 
-	private void uploadBulk(File file, String table, String session,
+	protected void uploadBulk(File file, String table, String session,
 			Connection conn) throws Exception {
 
 		final Statement bulkImport = conn.createStatement();
@@ -900,7 +900,7 @@ public class PostgresKB implements KnowledgeBase {
 		connection.close();
 	}
 
-	private void createIndexes() throws Exception {
+	protected void createIndexes() throws Exception {
 
 		try {
 			Statement s = connection.createStatement();
@@ -931,34 +931,49 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	private void createDatabase() throws Exception {
+	protected void createDatabase() throws Exception {
 
+		InputStream in = PostgresKB.class.getResourceAsStream(DBSCHEME_SQL);
+		BufferedReader reader = new BufferedReader(
+				new InputStreamReader(in));
+		StringBuilder builder = new StringBuilder();
+		for (String line = reader.readLine(); line != null; line = reader
+				.readLine()) {
+			builder.append(line);
+			builder.append("\n");
+		}
+		reader.close();
+		in.close();
+		String sqlBatch = builder.toString();
 		try {
 			Statement s = connection.createStatement();
 
-			InputStream in = PostgresKB.class.getResourceAsStream(DBSCHEME_SQL);
-			BufferedReader reader = new BufferedReader(
-					new InputStreamReader(in));
-
-			StringBuilder builder = new StringBuilder();
-			for (String line = reader.readLine(); line != null; line = reader
-					.readLine()) {
-				builder.append(line);
-				builder.append("\n");
-			}
-			reader.close();
-			in.close();
-			String sqlBatch = builder.toString();
 			for (String sql : sqlBatch.split(";\n")) {
 				s.addBatch(sql);
 			}
-			s.executeBatch();
+			int[] batches = s.executeBatch();
 			s.close();
 			connection.commit();
 			log.info("Created scheme: " + connection.getCatalog());
+		} catch(BatchUpdateException e1) {
+			int count = 0;
+			for(int i : e1.getUpdateCounts()) {
+				
+				switch(i) {
+					case Statement.SUCCESS_NO_INFO: System.out.println("Succeeded "+ sqlBatch.split(";\n")[count].trim());
+					case Statement.EXECUTE_FAILED: System.out.println("Failed "+ sqlBatch.split(";\n")[count].trim());
+					default :System.out.println("Succeeded with "+i+" update counts: "+ sqlBatch.split(";\n")[count].trim());
+				}
+				count++;
+			}
+			System.out.println("Failed "+ sqlBatch.split(";\n")[count].trim());
+			
+			throw new Exception(printSQLException(e1));
+
 		} catch (SQLException e) {
+			printSQLException(e);
 			log.log(Level.SEVERE, PostgresKB.class.getName(), e);
-			throw new Exception(e);
+			throw new Exception(printSQLException(e));
 		}
 	}
 
@@ -1630,5 +1645,23 @@ public class PostgresKB implements KnowledgeBase {
 		return regexs.toArray(new String[regexs.size()]);
 		
 	}
+	
+    protected String printSQLException(SQLException e) {
+        // Unwraps the entire exception chain to unveil the real cause of the
+        // Exception.
+
+    	
+        StringBuilder b = new StringBuilder();
+        while (e != null) {
+                b.append("\n----- SQLException -----");
+                b.append("  SQL State:  " + e.getSQLState());
+                b.append("  Error Code: " + e.getErrorCode());
+                b.append("  Message:    " + e.getMessage());
+                e = e.getNextException();
+        }
+
+        return b.toString();
+}
+
 
 }

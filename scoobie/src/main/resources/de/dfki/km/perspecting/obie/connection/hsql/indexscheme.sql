@@ -1,0 +1,9 @@
+CREATE INDEX idx_index_literals_prefix on index_literals (prefix);
+CREATE INDEX idx_index_literals_literal on index_literals (literal);
+CREATE INDEX idx_index_resources_uri on index_resources (uri);
+CREATE INDEX idx_relations_subject on relations (subject);
+CREATE INDEX idx_relations_predicate on relations (predicate);
+CREATE INDEX idx_relations_object on relations (object);
+CREATE INDEX idx_symbols_subject on symbols (subject);
+CREATE INDEX idx_symbols_predicate on symbols (predicate);
+CREATE INDEX idx_symbols_object on symbols (object);
