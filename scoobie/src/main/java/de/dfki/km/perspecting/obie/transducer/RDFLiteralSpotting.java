@@ -66,9 +66,7 @@ public class RDFLiteralSpotting extends Transducer {
 			log.info("Request Symbols Candidates");
 
 			long start = System.currentTimeMillis();
-			final RemoteCursor values = kb.getDatatypePropertyValues(
-					datatypePropertyFilter.toArray(), suffixes
-							.getCommonPrefixStrings());
+			final RemoteCursor values = kb.getDatatypePropertyValues(datatypePropertyFilter.toArray(), suffixes);
 			log.info("Request Symbols Candidates took: "
 					+ (System.currentTimeMillis() - start));
 			start = System.currentTimeMillis();

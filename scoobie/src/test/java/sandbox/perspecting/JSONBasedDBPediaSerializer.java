@@ -21,9 +21,8 @@
     along with SCOOBIE.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.dfki.km.perspecting.obie.postprocessor;
+package sandbox.perspecting;
 
-import java.io.Reader;
 import java.io.StringReader;
 import java.net.URL;
 import java.util.List;
@@ -41,6 +40,7 @@ import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.SemanticEntity;
 import de.dfki.km.perspecting.obie.model.TokenSequence;
+import de.dfki.km.perspecting.obie.postprocessor.Serializer;
 
 /*
  * plainUI.data.relations = {
@@ -67,10 +67,20 @@ import de.dfki.km.perspecting.obie.model.TokenSequence;
 
  */
 
-public class JSONSerializer implements Serializer {
+public class JSONBasedDBPediaSerializer implements Serializer {
 
+	private String dbpediaMirror = "pc-4323:8890";
+
+	public void setDbpediaMirror(String dbpediaMirror) {
+		this.dbpediaMirror = dbpediaMirror;
+	}
+	
+	public String getDbpediaMirror() {
+		return dbpediaMirror;
+	}
+	
 	@Override
-	public Reader serialize(Document document, KnowledgeBase kb) throws Exception {
+	public StringReader serialize(Document document, KnowledgeBase kb) throws Exception {
 
 		List<TokenSequence<SemanticEntity>> results = document
 				.getResolvedSubjects();
@@ -96,6 +106,10 @@ public class JSONSerializer implements Serializer {
 	@SuppressWarnings("unchecked")
 	private JSONObject getLinkedDataInfo(String uri) throws Exception {
 
+		
+		
+		
+		
 		SailRepository sr = new SailRepository(new MemoryStore());
 		SailRepositoryConnection conn;
 		sr.initialize();
@@ -108,7 +122,7 @@ public class JSONSerializer implements Serializer {
 		// hack to get data from local DBpedia mirror
 
 		String urlString = uri.replaceFirst("http://dbpedia.org/resource/",
-				"http://pc-4323:8890/data/");
+				"http://"+dbpediaMirror+"/data/");
 
 		URL url = new URL(urlString);
 
@@ -116,7 +130,7 @@ public class JSONSerializer implements Serializer {
 		conn.add(url, "", RDFFormat.RDFXML);
 
 		for (Statement stmt : conn.getStatements(null,
-				new URIImpl("http://pc-4323:8890/ontology/wikiPageRedirects"),
+				new URIImpl("http://"+dbpediaMirror+"/ontology/wikiPageRedirects"),
 				null, false).asList()) {
 			sr = new SailRepository(new MemoryStore());
 			sr.initialize();
@@ -186,9 +200,6 @@ public class JSONSerializer implements Serializer {
 			}
 
 		}
-
-		// json.put("_abstract", getText(uri.substring(uri.lastIndexOf("/")+1),
-		// 0));
 
 		return json;
 	}

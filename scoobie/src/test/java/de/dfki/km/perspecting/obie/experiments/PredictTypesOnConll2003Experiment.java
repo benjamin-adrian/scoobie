@@ -53,6 +53,7 @@ import de.dfki.km.perspecting.obie.transducer.SuffixArrayBuilder;
 import de.dfki.km.perspecting.obie.transducer.WordSegmenter;
 import de.dfki.km.perspecting.obie.transducer.model.CRFNounPhraseChunkerModel;
 import de.dfki.km.perspecting.obie.transducer.model.EntityClassifier;
+import de.dfki.km.perspecting.obie.transducer.model.LiteralHashing;
 import de.dfki.km.perspecting.obie.transducer.model.disambiguation.AmbiguityResolver;
 import de.dfki.km.perspecting.obie.transducer.model.disambiguation.DegreeBasedResolver;
 import de.dfki.km.perspecting.obie.vocabulary.Language;
@@ -107,7 +108,7 @@ public class PredictTypesOnConll2003Experiment {
 				new CRFNounPhraseChunkerModel(
 						Scoobie.class.getResourceAsStream("npc/en/EN.crf")));
 		
-		SuffixArrayBuilder suffixArrayBuilder = new SuffixArrayBuilder(100);
+		SuffixArrayBuilder suffixArrayBuilder = new SuffixArrayBuilder(100, new LiteralHashing(4));
 		RDFLiteralSpotting entityRecognizer = new RDFLiteralSpotting();
 		InstanceRecognition subjectResolver = new InstanceRecognition();
 		EntityDisambiguation subjectDisambiguator = new EntityDisambiguation(

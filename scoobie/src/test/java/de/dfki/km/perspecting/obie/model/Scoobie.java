@@ -48,6 +48,7 @@ import de.dfki.km.perspecting.obie.transducer.SentenceSegmenter;
 import de.dfki.km.perspecting.obie.transducer.SuffixArrayBuilder;
 import de.dfki.km.perspecting.obie.transducer.WordSegmenter;
 import de.dfki.km.perspecting.obie.transducer.model.CRFNounPhraseChunkerModel;
+import de.dfki.km.perspecting.obie.transducer.model.LiteralHashing;
 import de.dfki.km.perspecting.obie.transducer.model.MaxentEntityClassifierModel;
 import de.dfki.km.perspecting.obie.transducer.model.disambiguation.AmbiguityResolver;
 import de.dfki.km.perspecting.obie.transducer.model.disambiguation.DegreeBasedResolver;
@@ -80,6 +81,7 @@ public class Scoobie {
 
 		LanguageIdentification languageClassification = new LanguageIdentification(
 				Language.EN);
+		
 		WordSegmenter wordTokenizer = new WordSegmenter();
 		SentenceSegmenter sentenceTokenizer = new SentenceSegmenter();
 		
@@ -89,7 +91,7 @@ public class Scoobie {
 
 		ProperNameRecognition nounPhraseChunker = new ProperNameRecognition(new CRFNounPhraseChunkerModel(Scoobie.class.getResourceAsStream("npc/en/EN.crf")));
 
-		SuffixArrayBuilder suffixArrayBuilder = new SuffixArrayBuilder(100);
+		SuffixArrayBuilder suffixArrayBuilder = new SuffixArrayBuilder(100, new LiteralHashing(4));
 		RDFLiteralSpotting namedEntityRecognizer = new RDFLiteralSpotting();
 		InstanceRecognition instanceResolver = new InstanceRecognition();
 		EntityDisambiguation instanceDisambiguator = new EntityDisambiguation(
@@ -103,24 +105,24 @@ public class Scoobie {
 				);
 		
 
-		MaxentEntityClassifierModel cl = new MaxentEntityClassifierModel(
-				classificationModel, Language.EN, new int[] { 1, 2, 3 }, true,
-				true, true, 1.0, 4, new String[] { "VB", "ADJ", "NNP", "NN",
-						"NNS" });
-		cl.load(kb, null);
-		EntityClassification namedEntityClassifier = new EntityClassification(
-				0.6, cl.getClassifier());
+//		MaxentEntityClassifierModel cl = new MaxentEntityClassifierModel(
+//				classificationModel, Language.EN, new int[] { 1, 2, 3 }, true,
+//				true, true, 1.0, 4, new String[] { "VB", "ADJ", "NNP", "NN",
+//						"NNS" });
+//		cl.load(kb, null);
+//		EntityClassification namedEntityClassifier = new EntityClassification(
+//				0.6, cl.getClassifier());
 		
-		String DATE = "(19|20)\\\\d{2}-(0[1-9]|1[012]|[1-9])-(0[1-9]|[1-9]|[12][0-9]|3[01])";
-		String MAIL = "[\\\\w]+@[\\\\w]+";
-		String ISBN10 = "ISBN\\\\x20(?=.{13}$)\\\\d{1,5}([- ])\\\\d{1,7}\\\\1\\\\d{1,6}\\\\1(\\\\d|X)$";
-		String FLOAT = "[-]?[0-9]+\\\\.[0-9]+";
-		String POINT = "[-]?[0-9]+\\\\.[0-9]+ [-]?[0-9]+\\\\.[0-9]+";
-		String[] patterns = new String[] { DATE, FLOAT, POINT };
-		
-		kb.calculateRegexDistributions(patterns);
-		RegularStructuredEntityRecognition structuredEntityRecognizer = new RegularStructuredEntityRecognition(
-				patterns);
+//		String DATE = "(19|20)\\\\d{2}-(0[1-9]|1[012]|[1-9])-(0[1-9]|[1-9]|[12][0-9]|3[01])";
+//		String MAIL = "[\\\\w]+@[\\\\w]+";
+//		String ISBN10 = "ISBN\\\\x20(?=.{13}$)\\\\d{1,5}([- ])\\\\d{1,7}\\\\1\\\\d{1,6}\\\\1(\\\\d|X)$";
+//		String FLOAT = "[-]?[0-9]+\\\\.[0-9]+";
+//		String POINT = "[-]?[0-9]+\\\\.[0-9]+ [-]?[0-9]+\\\\.[0-9]+";
+//		String[] patterns = new String[] { DATE, FLOAT, POINT };
+//		
+//		kb.calculateRegexDistributions(patterns);
+//		RegularStructuredEntityRecognition structuredEntityRecognizer = new RegularStructuredEntityRecognition(
+//				patterns);
 
 
 

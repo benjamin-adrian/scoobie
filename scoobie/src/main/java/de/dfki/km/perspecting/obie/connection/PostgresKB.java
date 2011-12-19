@@ -66,6 +66,8 @@ import cern.colt.matrix.doublealgo.Statistic;
 import de.dfki.km.perspecting.obie.connection.RDFTripleParser.TripleStats;
 import de.dfki.km.perspecting.obie.corpus.TextCorpus;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
+import de.dfki.km.perspecting.obie.transducer.model.LiteralHashing;
+import de.dfki.km.perspecting.obie.transducer.model.SuffixArray;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 import de.dfki.km.perspecting.obie.workflow.Pipeline;
 
@@ -100,10 +102,6 @@ public class PostgresKB implements KnowledgeBase {
 		return uri;
 	}
 
-	public String getSession() {
-		return session;
-	}
-
 	protected ResultSet executeQuery(String sql) throws Exception {
 		long start = System.currentTimeMillis();
 		try {
@@ -132,37 +130,38 @@ public class PostgresKB implements KnowledgeBase {
 					+ (System.currentTimeMillis() - start));
 		}
 	}
-
-	@Override
-	public RemoteCursor getDatatypePropertyValues(int datatypePropertyIndex,
-			int rdfType) throws Exception {
-		String sql = "SELECT DISTINCT index_literals.literal, index_literals.index, symbols.belief "
-				+ "FROM index_literals, symbols, relations "
-				+ "WHERE (symbols.belief = 1.0 AND symbols.predicate = ? "
-				+ "AND symbols.object = index_literals.index AND symbols.subject = relations.subject "
-				+ "AND relations.object = ?) "
-				+ "ORDER BY index_literals.literal";
-		try {
-			PreparedStatement stmtGetTypedDatatypePropertyValues = connection
-					.prepareStatement(sql);
-
-			stmtGetTypedDatatypePropertyValues.setInt(1, datatypePropertyIndex);
-			stmtGetTypedDatatypePropertyValues.setInt(2, rdfType);
-			return new ResultSetCursor(executeQuery(
-					stmtGetTypedDatatypePropertyValues, sql));
-
-		} catch (SQLException e) {
-			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
-					+ sql, e);
-			throw e;
-		}
-	}
+	
+//
+//	@Override
+//	public RemoteCursor getDatatypePropertyValues(int datatypePropertyIndex,
+//			int rdfType) throws Exception {
+//		String sql = "SELECT DISTINCT index_literals.literal, index_literals.index, symbols.belief "
+//				+ "FROM index_literals, symbols, relations "
+//				+ "WHERE (symbols.belief = 1.0 AND symbols.predicate = ? "
+//				+ "AND symbols.object = index_literals.index AND symbols.subject = relations.subject "
+//				+ "AND relations.object = ?) "
+//				+ "ORDER BY index_literals.literal";
+//		try {
+//			PreparedStatement stmtGetTypedDatatypePropertyValues = connection
+//					.prepareStatement(sql);
+//
+//			stmtGetTypedDatatypePropertyValues.setInt(1, datatypePropertyIndex);
+//			stmtGetTypedDatatypePropertyValues.setInt(2, rdfType);
+//			return new ResultSetCursor(executeQuery(
+//					stmtGetTypedDatatypePropertyValues, sql));
+//
+//		} catch (SQLException e) {
+//			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
+//					+ sql, e);
+//			throw e;
+//		}
+//	}
 
 	@Override
 	public ResultSetCursor getDatatypePropertyValues(
-			int[] datatypePropertyFilter, int[] prefixes) throws Exception {
+			int[] datatypePropertyFilter, SuffixArray suffixArray) throws Exception {
 		StringBuilder sql = new StringBuilder();
-
+		int[] prefixes = suffixArray.getCommonPrefixStrings();
 		sql.append("SELECT DISTINCT LOWER(index_literals.literal), index_literals.index, symbols.predicate, symbols.belief, index_literals.literal "
 				+ "FROM index_literals, symbols "
 				+ "WHERE ( "
@@ -208,6 +207,7 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
+	@Override
 	public ResultSetCursor getInstanceCandidates(
 			Map<Integer, Set<Integer>> literalKeys) throws Exception {
 
@@ -246,7 +246,8 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	public ResultSetCursor dbSort(List<CharSequence> index, int maxLength)
+	@Override
+	public ResultSetCursor dbSort(List<String> index, int maxLength)
 			throws Exception {
 
 		String prefix = "SELECT * FROM ( VALUES ";
@@ -270,8 +271,7 @@ public class PostgresKB implements KnowledgeBase {
 			for (int i = 0; i < index.size(); i++) {
 				int min = Math.min(maxLength, index.get(i).length());
 				pstmt.setString(i + 1,
-						((String) index.get(i).subSequence(0, min))
-								.toLowerCase());
+						index.get(i).substring(0, min));
 			}
 
 			ResultSet rs = executeQuery(pstmt, sql);
@@ -285,6 +285,7 @@ public class PostgresKB implements KnowledgeBase {
 
 	private PreparedStatement stmtGetLiteralIndex = null;
 
+	@Override
 	public int getLiteralIndex(String literal) throws Exception {
 		int result = -1;
 		final String sql = "SELECT index_literals.index FROM index_literals WHERE (index_literals.literal = ?)";
@@ -318,6 +319,7 @@ public class PostgresKB implements KnowledgeBase {
 
 	PreparedStatement stmtGetURI = null;
 
+	@Override
 	public String getURI(int index) throws Exception {
 		ResultSet rs = null;
 		String result = null;
@@ -347,12 +349,13 @@ public class PostgresKB implements KnowledgeBase {
 
 	private PreparedStatement stmtGetLiteral = null;
 
+	@Override
 	public String getLiteral(int index) throws Exception {
 
 		String result = null;
 		final String sql = "SELECT index_literals.literal FROM index_literals WHERE (index_literals.index = ?)";
 		try {
-			if (stmtGetLiteralIndex == null)
+			if (stmtGetLiteral == null)
 				stmtGetLiteral = connection.prepareStatement(sql);
 
 			stmtGetLiteral.setInt(1, index);
@@ -377,6 +380,7 @@ public class PostgresKB implements KnowledgeBase {
 
 	PreparedStatement stmtGetUriIndex = null;
 
+	@Override
 	public int getUriIndex(String uri) throws Exception {
 		ResultSet rs = null;
 		int result = -1;
@@ -405,82 +409,84 @@ public class PostgresKB implements KnowledgeBase {
 		}
 
 	}
+//
+//	PreparedStatement stmtGetOutgoingRelations = null;
+//
+//	@Override
+//	public int[] getOutgoingRelations(int instance, int relation)
+//			throws Exception {
+//		final String sql = "SELECT relations.object FROM relations WHERE (relations.subject = ? AND relations.predicate = ?)";
+//		final TIntHashSet s = new TIntHashSet();
+//
+//		try {
+//			if (relation == -1) {
+//				for (Set<Integer> s1 : getOutgoingRelations(instance).values()) {
+//					for (int r : s1) {
+//						s.add(r);
+//					}
+//				}
+//			} else {
+//
+//				if (stmtGetOutgoingRelations == null) {
+//					stmtGetOutgoingRelations = connection.prepareStatement(sql);
+//				}
+//				stmtGetOutgoingRelations.setInt(1, instance);
+//				stmtGetOutgoingRelations.setInt(2, relation);
+//
+//				ResultSet rs = executeQuery(stmtGetOutgoingRelations, sql);
+//
+//				while (rs.next()) {
+//					s.add(rs.getInt(1));
+//				}
+//				rs.close();
+//			}
+//		} catch (Exception e) {
+//			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
+//					+ sql, e);
+//			throw e;
+//		}
+//		return s.toArray();
+//	}
 
-	PreparedStatement stmtGetOutgoingRelations = null;
+//	PreparedStatement stmtGetAllOutgoingRelations = null;
+//
+//	@Override
+//	public Map<Integer, Set<Integer>> getOutgoingRelations(int instance)
+//			throws Exception {
+//		HashMap<Integer, Set<Integer>> relations = new HashMap<Integer, Set<Integer>>();
+//		String sql = "SELECT relations.predicate, relations.object FROM relations WHERE (relations.subject = ?)";
+//
+//		try {
+//
+//			if (stmtGetAllOutgoingRelations == null) {
+//				stmtGetAllOutgoingRelations = connection.prepareStatement(sql);
+//			}
+//
+//			stmtGetAllOutgoingRelations.setInt(1, instance);
+//
+//			ResultSet rs = executeQuery(stmtGetAllOutgoingRelations, sql);
+//
+//			while (rs.next()) {
+//
+//				int property = rs.getInt(1);
+//
+//				Set<Integer> mask = relations.get(property);
+//				if (mask == null) {
+//					mask = new HashSet<Integer>();
+//					relations.put(property, mask);
+//				}
+//				mask.add(rs.getInt(2));
+//			}
+//			rs.close();
+//			return relations;
+//		} catch (Exception e) {
+//			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
+//					+ sql, e);
+//			throw e;
+//		}
+//	}
 
 	@Override
-	public int[] getOutgoingRelations(int instance, int relation)
-			throws Exception {
-		final String sql = "SELECT relations.object FROM relations WHERE (relations.subject = ? AND relations.predicate = ?)";
-		final TIntHashSet s = new TIntHashSet();
-
-		try {
-			if (relation == -1) {
-				for (Set<Integer> s1 : getOutgoingRelations(instance).values()) {
-					for (int r : s1) {
-						s.add(r);
-					}
-				}
-			} else {
-
-				if (stmtGetOutgoingRelations == null) {
-					stmtGetOutgoingRelations = connection.prepareStatement(sql);
-				}
-				stmtGetOutgoingRelations.setInt(1, instance);
-				stmtGetOutgoingRelations.setInt(2, relation);
-
-				ResultSet rs = executeQuery(stmtGetOutgoingRelations, sql);
-
-				while (rs.next()) {
-					s.add(rs.getInt(1));
-				}
-				rs.close();
-			}
-		} catch (Exception e) {
-			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
-					+ sql, e);
-			throw e;
-		}
-		return s.toArray();
-	}
-
-	PreparedStatement stmtGetAllOutgoingRelations = null;
-
-	public Map<Integer, Set<Integer>> getOutgoingRelations(int instance)
-			throws Exception {
-		HashMap<Integer, Set<Integer>> relations = new HashMap<Integer, Set<Integer>>();
-		String sql = "SELECT relations.predicate, relations.object FROM relations WHERE (relations.subject = ?)";
-
-		try {
-
-			if (stmtGetAllOutgoingRelations == null) {
-				stmtGetAllOutgoingRelations = connection.prepareStatement(sql);
-			}
-
-			stmtGetAllOutgoingRelations.setInt(1, instance);
-
-			ResultSet rs = executeQuery(stmtGetAllOutgoingRelations, sql);
-
-			while (rs.next()) {
-
-				int property = rs.getInt(1);
-
-				Set<Integer> mask = relations.get(property);
-				if (mask == null) {
-					mask = new HashSet<Integer>();
-					relations.put(property, mask);
-				}
-				mask.add(rs.getInt(2));
-			}
-			rs.close();
-			return relations;
-		} catch (Exception e) {
-			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
-					+ sql, e);
-			throw e;
-		}
-	}
-
 	public ResultSetCursor getOutgoingRelations(int[] instances)
 			throws Exception {
 		final StringBuilder b = new StringBuilder();
@@ -504,6 +510,7 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
+	@Override
 	public ResultSetCursor getIncomingRelations(int[] instances)
 			throws Exception {
 		StringBuilder b = new StringBuilder();
@@ -538,83 +545,84 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	private PreparedStatement stmtGetIncomingRelations = null;
+//	private PreparedStatement stmtGetIncomingRelations = null;
+//
+//	@Override
+//	public int[] getIncomingRelations(int instance, int relation)
+//			throws Exception {
+//		String sql = "SELECT relations.subject FROM relations WHERE (relations.object = ? AND relations.predicate = ?)";
+//		TIntHashSet s = new TIntHashSet();
+//
+//		try {
+//			if (relation == -1) {
+//				for (Set<Integer> s1 : getIncomingRelations(instance).values()) {
+//					for (int r : s1) {
+//						s.add(r);
+//					}
+//				}
+//				return s.toArray();
+//			} else {
+//
+//				if (stmtGetIncomingRelations == null) {
+//					stmtGetIncomingRelations = connection.prepareStatement(sql);
+//				}
+//				stmtGetIncomingRelations.setInt(1, instance);
+//				stmtGetIncomingRelations.setInt(2, relation);
+//
+//				ResultSet rs = executeQuery(stmtGetIncomingRelations, sql);
+//
+//				while (rs.next()) {
+//					s.add(rs.getInt(1));
+//				}
+//				rs.close();
+//			}
+//		} catch (Exception e) {
+//			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
+//					+ sql, e);
+//			throw e;
+//		}
+//		return s.toArray();
+//
+//	}
 
-	@Override
-	public int[] getIncomingRelations(int instance, int relation)
-			throws Exception {
-		String sql = "SELECT relations.subject FROM relations WHERE (relations.object = ? AND relations.predicate = ?)";
-		TIntHashSet s = new TIntHashSet();
+//	private PreparedStatement stmtGetAllIncomingRelations = null;
 
-		try {
-			if (relation == -1) {
-				for (Set<Integer> s1 : getIncomingRelations(instance).values()) {
-					for (int r : s1) {
-						s.add(r);
-					}
-				}
-				return s.toArray();
-			} else {
-
-				if (stmtGetIncomingRelations == null) {
-					stmtGetIncomingRelations = connection.prepareStatement(sql);
-				}
-				stmtGetIncomingRelations.setInt(1, instance);
-				stmtGetIncomingRelations.setInt(2, relation);
-
-				ResultSet rs = executeQuery(stmtGetIncomingRelations, sql);
-
-				while (rs.next()) {
-					s.add(rs.getInt(1));
-				}
-				rs.close();
-			}
-		} catch (Exception e) {
-			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
-					+ sql, e);
-			throw e;
-		}
-		return s.toArray();
-
-	}
-
-	private PreparedStatement stmtGetAllIncomingRelations = null;
-
-	public Map<Integer, Set<Integer>> getIncomingRelations(int instance)
-			throws Exception {
-
-		HashMap<Integer, Set<Integer>> relations = new HashMap<Integer, Set<Integer>>();
-
-		String sql = "SELECT relations.predicate, relations.subject FROM relations WHERE (relations.object = ?)";
-
-		try {
-			if (stmtGetAllIncomingRelations == null) {
-				stmtGetAllIncomingRelations = connection.prepareStatement(sql);
-			}
-			stmtGetAllIncomingRelations.setInt(1, instance);
-
-			ResultSet rs = executeQuery(stmtGetAllIncomingRelations, sql);
-
-			while (rs.next()) {
-
-				int property = rs.getInt(1);
-
-				Set<Integer> mask = relations.get(property);
-				if (mask == null) {
-					mask = new HashSet<Integer>();
-					relations.put(property, mask);
-				}
-				mask.add(rs.getInt(2));
-			}
-			rs.close();
-		} catch (Exception e) {
-			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
-					+ sql, e);
-			throw e;
-		}
-		return relations;
-
-	}
+//	@Override
+//	public Map<Integer, Set<Integer>> getIncomingRelations(int instance)
+//			throws Exception {
+//
+//		HashMap<Integer, Set<Integer>> relations = new HashMap<Integer, Set<Integer>>();
+//
+//		String sql = "SELECT relations.predicate, relations.subject FROM relations WHERE (relations.object = ?)";
+//
+//		try {
+//			if (stmtGetAllIncomingRelations == null) {
+//				stmtGetAllIncomingRelations = connection.prepareStatement(sql);
+//			}
+//			stmtGetAllIncomingRelations.setInt(1, instance);
+//
+//			ResultSet rs = executeQuery(stmtGetAllIncomingRelations, sql);
+//
+//			while (rs.next()) {
+//
+//				int property = rs.getInt(1);
+//
+//				Set<Integer> mask = relations.get(property);
+//				if (mask == null) {
+//					mask = new HashSet<Integer>();
+//					relations.put(property, mask);
+//				}
+//				mask.add(rs.getInt(2));
+//			}
+//			rs.close();
+//		} catch (Exception e) {
+//			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
+//					+ sql, e);
+//			throw e;
+//		}
+//		return relations;
+//
+//	}
 
 	int typeIndex = -1;
 
@@ -699,18 +707,19 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
-	public RemoteCursor getLiteralLengthHistogram() throws Exception {
-		String sql = "SELECT LENGTH(literal), COUNT(LENGTH(literal)) FROM INDEX_LITERALS GROUP BY LENGTH(literal) ORDER BY LENGTH(literal)";
-		try {
-			PreparedStatement pstmt1 = connection.prepareStatement(sql);
-			ResultSet rs = executeQuery(pstmt1, sql);
-			return new ResultSetCursor(rs);
-		} catch (Exception e) {
-			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
-					+ sql, e);
-			throw e;
-		}
-	}
+//	@Override
+//	public RemoteCursor getLiteralLengthHistogram() throws Exception {
+//		String sql = "SELECT LENGTH(literal), COUNT(LENGTH(literal)) FROM INDEX_LITERALS GROUP BY LENGTH(literal) ORDER BY LENGTH(literal)";
+//		try {
+//			PreparedStatement pstmt1 = connection.prepareStatement(sql);
+//			ResultSet rs = executeQuery(pstmt1, sql);
+//			return new ResultSetCursor(rs);
+//		} catch (Exception e) {
+//			log.log(Level.SEVERE, "an error occurred in executing SQL query: "
+//					+ sql, e);
+//			throw e;
+//		}
+//	}
 
 	@Override
 	public int[] getClusters() throws Exception {
@@ -884,10 +893,10 @@ public class PostgresKB implements KnowledgeBase {
 	@Override
 	public void preprocessRdfData(InputStream[] datasets,
 			MediaType rdfMimeType, MediaType fileMimeType,
-			String absoluteBaseURI) throws Exception {
+			String absoluteBaseURI, LiteralHashing hashing) throws Exception {
 		this.connection.setAutoCommit(false);
 		createDatabase();
-		loadRDFData(datasets, rdfMimeType, absoluteBaseURI, fileMimeType);
+		loadRDFData(datasets, rdfMimeType, absoluteBaseURI, fileMimeType, hashing);
 		connection.commit();
 		createIndexes();
 		connection.commit();
@@ -944,7 +953,7 @@ public class PostgresKB implements KnowledgeBase {
 			for (String sql : sqlBatch.split(";\n")) {
 				s.addBatch(sql);
 			}
-			int[] batches = s.executeBatch();
+			s.executeBatch();
 			s.close();
 			connection.commit();
 			log.info("Created scheme: " + connection.getCatalog());
@@ -972,12 +981,12 @@ public class PostgresKB implements KnowledgeBase {
 
 	private void loadRDFData(InputStream[] instanceBases,
 			MediaType rdfMimeType, String absoluteBaseURI,
-			MediaType fileMimeType) throws Exception {
+			MediaType fileMimeType, LiteralHashing hashing) throws Exception {
 		final ExecutorService pool = Executors.newCachedThreadPool();
 
 		log.info("Parsing RDF dump files: ... ");
 		long start = System.currentTimeMillis();
-		RDFTripleParser parser = new RDFTripleParser();
+		RDFTripleParser parser = new RDFTripleParser(hashing);
 
 		File.createTempFile(session, "").mkdir();
 
@@ -1165,6 +1174,7 @@ public class PostgresKB implements KnowledgeBase {
 		log.info("Added " + updateCount + " triples with datatype properties");
 	}
 
+	@Override
 	public void calculateCardinalities() throws Exception {
 
 		connection.createStatement().executeUpdate(
@@ -1195,6 +1205,7 @@ public class PostgresKB implements KnowledgeBase {
 
 	private TIntDoubleHashMap subjectCardinialityCache = new TIntDoubleHashMap();
 
+	@Override
 	public double getSubjectCardinality(int p) throws Exception {
 
 		if (subjectCardinialityCache.isEmpty()) {
@@ -1210,7 +1221,8 @@ public class PostgresKB implements KnowledgeBase {
 
 		return subjectCardinialityCache.get(p);
 	}
-
+	
+	@Override
 	public void calculateMarkovChain(int[] blackListedProperties,
 			int sampleCount) throws Exception {
 		final TObjectIntHashMap<String> graph1 = new TObjectIntHashMap<String>();
@@ -1309,6 +1321,7 @@ public class PostgresKB implements KnowledgeBase {
 
 	private HashMap<String, ArrayList<String>> markovChainCache = new HashMap<String, ArrayList<String>>();
 
+	@Override
 	public double getMarkovProbability(int subject, int predicate, int object)
 			throws Exception {
 
@@ -1327,6 +1340,7 @@ public class PostgresKB implements KnowledgeBase {
 		}
 	}
 
+	@Override
 	public List<double[]> getMaxMarkovProbability(int subject, int object, int k)
 			throws Exception {
 
@@ -1368,6 +1382,7 @@ public class PostgresKB implements KnowledgeBase {
 
 	}
 
+	@Override
 	public TIntObjectHashMap<TIntObjectHashMap<double[]>> getCoverageAmbiguity()
 			throws Exception {
 
@@ -1405,12 +1420,13 @@ public class PostgresKB implements KnowledgeBase {
 
 		return result;
 	}
-
+	
+	@Override
 	public void calculateProperNameStatistics(TextCorpus corpus, Pipeline pipe)
 			throws Exception {
 
 		connection.createStatement().executeUpdate(
-				"DELETE FROM TABLE proper_noun_rating");
+				"DELETE FROM proper_noun_rating");
 		connection.commit();
 
 		final TIntDoubleHashMap propertyIDF = corpus.getDocumentFrequency(pipe);
@@ -1473,6 +1489,7 @@ public class PostgresKB implements KnowledgeBase {
 	 * @throws Exception
 	 * @throws SQLException
 	 */
+	@Override
 	public DoubleMatrix getTypeCorrelations(int samples) throws Exception {
 		Set<Integer> types = new HashSet<Integer>();
 		RemoteCursor rs = getRDFTypes();
@@ -1520,11 +1537,12 @@ public class PostgresKB implements KnowledgeBase {
 		return data;
 	}
 
+	@Override
 	public void clusterCorrelatingClasses(int samples, double biasThreshold,
 			double pruningThreshold) throws Exception {
 
 		connection.createStatement().executeUpdate(
-				"DELETE FROM TABLE type_clusters");
+				"DELETE FROM type_clusters");
 		connection.commit();
 
 		final DoubleMatrix data = getTypeCorrelations(samples);
@@ -1584,12 +1602,12 @@ public class PostgresKB implements KnowledgeBase {
 		connection.commit();
 	}
 	
-
+	@Override
 	public void calculateRegexDistributions(String[] regexs) throws Exception {
 		
 
 		connection.createStatement().executeUpdate(
-				"DELETE FROM TABLE literals_regex_distribution");
+				"DELETE FROM literals_regex_distribution");
 		connection.commit();
 		
 		
@@ -1612,6 +1630,7 @@ public class PostgresKB implements KnowledgeBase {
 		connection.commit();
 	}
 
+	@Override
 	public TIntDoubleHashMap getDatatypePropertiesForRegex(String regex) throws Exception {
 		String sql = "SELECT * FROM literals_regex_distribution WHERE regex = '"
 				+ regex + "'";
@@ -1625,6 +1644,7 @@ public class PostgresKB implements KnowledgeBase {
 		return result;
 	}
 
+	@Override
 	public String[] getRegexs() throws Exception {
 		ArrayList<String> regexs = new ArrayList<String>();
 		

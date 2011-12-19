@@ -107,9 +107,13 @@ public class ScoobieExperiment {
 						Document document = $.pipeline().createDocument(doc, uri,
 								corpus.getMediatype(), template, corpus
 										.getLanguage());
-						for (int step = 0; $.pipeline().hasNext(step); step = $.pipeline()
-								.execute(step, document))
-							;
+						
+						for (int step = 0; 
+								$.pipeline().hasNext(step); 
+								step = $.pipeline()
+								.execute(step, document)) {
+							
+						}
 						BufferedReader recos = new BufferedReader(s.serialize(
 								document, $.kb()));
 

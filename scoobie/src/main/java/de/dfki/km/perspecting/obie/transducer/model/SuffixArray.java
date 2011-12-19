@@ -25,7 +25,6 @@ package de.dfki.km.perspecting.obie.transducer.model;
 
 import gnu.trove.TIntHashSet;
 
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -37,7 +36,6 @@ import java.util.regex.Pattern;
 import com.ibm.icu.text.Collator;
 
 import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
-import de.dfki.km.perspecting.obie.connection.RemoteCursor;
 import de.dfki.km.perspecting.obie.connection.RemoteCursor;
 import de.dfki.km.perspecting.obie.model.TextPointer;
 import de.dfki.km.perspecting.obie.model.Token;
@@ -60,43 +58,22 @@ public class SuffixArray {
 	private final Logger log = Logger.getLogger(SuffixArray.class.getName());
 	private final String text;
 
-	private List<CharSequence> index = new ArrayList<CharSequence>();
+	private List<String> index = new ArrayList<String>();
 	private List<String> index2 = new ArrayList<String>();
-	public static int PREFIX_SIZE = 4;
-	private final static Pattern p = Pattern
-			.compile("[^\\p{L}0-9\\s]+|[\\p{L}0-9]+");
 
 	final ArrayList<Integer> indexes = new ArrayList<Integer>();
 
 	private final TIntHashSet commonPrefixStrings = new TIntHashSet();
 
 	private KnowledgeBase ontology;
+	private LiteralHashing hashing;
 	private int maxLength;
-
+	
 	private final static CaseSensitiveComparator prefix_collator = new CaseSensitiveComparator();
 
-	// private final static ArrayLineComparator collator = new
-	// ArrayLineComparator();
-
-	/**
-	 * Creates a new {@link SuffixArray} about a text {@link String}.
-	 * 
-	 * @param text
-	 *            A text as {@link String}.
-	 * @throws Exception
-	 */
-	public SuffixArray(final String text, KnowledgeBase ontology, int maxLength)
+	public SuffixArray(List<Token> tokens, KnowledgeBase ontology, LiteralHashing hashing, int maxLength)
 			throws Exception {
-		this.maxLength = maxLength;
-		this.ontology = ontology;
-		prefix_collator.setStrength(Collator.PRIMARY);
-		this.text = text;
-		create(text);
-	}
-
-	public SuffixArray(List<Token> tokens, KnowledgeBase ontology, int maxLength)
-			throws Exception {
-		this.maxLength = maxLength;
+		this.hashing = hashing;
 		this.ontology = ontology;
 		prefix_collator.setStrength(Collator.PRIMARY);
 		if (!tokens.isEmpty())
@@ -107,105 +84,11 @@ public class SuffixArray {
 
 	}
 
-	/**
-	 * This method should be overridden by a more efficient implementation.
-	 * 
-	 * @param text
-	 *            A text as {@link String}.
-	 * @throws Exception
-	 */
-	protected void create(final String text) throws Exception {
-
-		/**
-		 * This if condition is added so that if the text is of the structure of
-		 * n-gram (from the fusing HWR and SCOOBIE app) it creates the indexes
-		 * according to the n-gram nature.
-		 * 
-		 * It checks if it starts with the separating indexes of the n-gram
-		 * virtual document which is unlikely to have a normal text start with.
-		 * 
-		 * This could be avoided if the prefix array could be created at the
-		 * application end and set from the start.
-		 * 
-		 * @author Menna Ghoneim
-		 */
-		if (text.startsWith("(##0,0##)")) {
-			create(text, true);
-			return;
-		}
-
-		final Matcher m = p.matcher(text);
-
-		while (m.find()) {
-			indexes.add(m.end());
-		}
-		if (indexes.get(0) != 0) {
-			indexes.add(0, -1);
-		}
-		// indexes.add(text.length() - 1);
-		for (int i = indexes.size() - 2; i >= 0; i--) {
-			ArrayLine al = new ArrayLine(indexes.get(i) + 1, text.length());
-			index.add(al);
-		}
-		// select * from (values('James „Buster“'), ('Trevor "Hockey"'),
-		// ('Trevorcorbin')) AS t(string) order by string
-		// Collections.sort(index, collator);
-		dbSort();
-	}
-
-	/**
-	 * This method is done only when the scoobie is used for the application of
-	 * fusing HWR with scoobie. It is chosen instead the normal create method in
-	 * order to accomodate the nature of the n-gram
-	 * 
-	 * It could be optimized in order to reduce the processing time.
-	 * 
-	 * @author Menna Ghoneim
-	 */
-
-	protected void create(final String text, boolean b) throws Exception {
-
-		// each ngram starts with a new line
-		String[] test = text.split("\n");
-
-		String prefix = "";
-		// the prefix of each ngram is taken in the CPS since ngrams anyway
-		// start from every word.
-		for (int i = 0; i < test.length; i++) {
-			// This is the end separator for each ngram, in order to discard it.
-			int j = test[i].indexOf("##)");
-			if (j > 0)
-				test[i] = test[i].substring(j + 3);
-
-			if (PREFIX_SIZE < test[i].length()) {
-				prefix = test[i].substring(0, PREFIX_SIZE);
-			} else {
-				prefix = test[i];
-			}
-			if (!prefix.equals("")) {
-				if (Character.isLetterOrDigit(prefix.charAt(0))) {
-					commonPrefixStrings.add(prefix.hashCode());
-				}
-
-				ArrayLine al = new ArrayLine(text.indexOf(test[i]), text
-						.indexOf(test[i])
-						+ test[i].length());
-				index.add(al);
-			}
-		}
-
-		dbSort();
-
-		log.info("Size of suffix array: " + this.index.size());
-	}
-
 	protected void dbSort() throws Exception {
 		RemoteCursor rs = ontology.dbSort(index, maxLength);
 		if (rs != null) {
 			while (rs.next()) {
 				index2.add(rs.getString(1));
-				// System.out.println(rs.getRs().getString(1).replaceAll("\n",
-				// " "));
 			}
 
 			rs.close();
@@ -216,52 +99,28 @@ public class SuffixArray {
 		return commonPrefixStrings.toArray();
 	}
 
-	public int commonPrefixSize() {
-		return commonPrefixStrings.size();
-	}
-
 	protected void create(List<Token> tokens) throws Exception {
-
-		/**
-		 * This if condition is added so that if the text is of the structure of
-		 * n-gram (from the fusing HWR and SCOOBIE app) it creates the indexes
-		 * according to the n-gram nature.
-		 * 
-		 * It checks if it starts with the separating indexes of the n-gram
-		 * virtual document which is unlikely to have a normal text start with.
-		 * 
-		 * This could be avoided if the prefix array could be created at the
-		 * application end and set from the start.
-		 * 
-		 * @author Menna Ghoneim
-		 */
-		if (text.startsWith("(##0,0##)")) {
-			create(text, true);
-			return;
-		}
 
 		log.info("Creating sorted token list of size " + tokens.size());
 		for (Token t : tokens) {
 			String prefix;
-			if (t.getStart() + PREFIX_SIZE < t.getTextSource().length()) {
+			if (t.getStart() + hashing.getCharacterLength() < t.getTextSource().length()) {
 				prefix = t.getTextSource().substring(t.getStart(),
-						t.getStart() + PREFIX_SIZE);
+						t.getStart() + hashing.getCharacterLength());
 			} else {
 				prefix = t.getTextSource().substring(t.getStart());
 			}
 
 			if (Character.isLetterOrDigit(prefix.charAt(0))) {
-				// String lc = prefix.toLowerCase();
-				commonPrefixStrings.add(prefix.hashCode());
-				commonPrefixStrings.add(prefix.toLowerCase().hashCode());
-				// commonPrefixStrings.add(lc);
+				commonPrefixStrings.add(hashing.hash(prefix.toLowerCase(Locale.US)));
+				commonPrefixStrings.add(hashing.hash(prefix)); // compatibility issue :(
 			}
 
 			int min = Math.min(t.getTextSource().length(), t.getStart()
 					+ maxLength);
 
 			ArrayLine al = new ArrayLine(t.getStart(), min);
-			index.add(al);
+			index.add(al.toString().toLowerCase(Locale.US));
 			// indexes.add(t.getEnd());
 		}
 		dbSort();
@@ -404,7 +263,7 @@ public class SuffixArray {
 		final ArrayList<TextPointer> pairs = new ArrayList<TextPointer>();
 
 		int indexA = 0;
-		int indexB = 1;
+//		int indexB = 1;
 
 		String dbLine = null;
 		String saLine;
@@ -413,7 +272,7 @@ public class SuffixArray {
 		int comparison;
 		while (indexA < this.index2.size() && stepNext) {
 			dbLine = rs.getString(1);
-			saLine = index2.get(indexA).toLowerCase(Locale.US);
+			saLine = index2.get(indexA);
 			//
 			// if (saLine.startsWith("barack obama") && dbLine.startsWith("b"))
 			// {
@@ -482,12 +341,12 @@ public class SuffixArray {
 					} while (tmpComparison == 0 && indexA + i < index.size());
 				}
 				stepNext = rs.next();
-				indexB++;
+//				indexB++;
 			}
 
 			if (comparison > 0) {
 				stepNext = rs.next();
-				indexB++;
+//				indexB++;
 			}
 
 			if (comparison < 0) {

@@ -54,6 +54,7 @@ import de.dfki.km.perspecting.obie.transducer.SentenceSegmenter;
 import de.dfki.km.perspecting.obie.transducer.SuffixArrayBuilder;
 import de.dfki.km.perspecting.obie.transducer.WordSegmenter;
 import de.dfki.km.perspecting.obie.transducer.model.CRFNounPhraseChunkerModel;
+import de.dfki.km.perspecting.obie.transducer.model.LiteralHashing;
 import de.dfki.km.perspecting.obie.vocabulary.Language;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 import de.dfki.km.perspecting.obie.workflow.DummyTask;
@@ -126,7 +127,7 @@ public class ProperNameExperiment {
 				new CRFNounPhraseChunkerModel(
 						Scoobie.class.getResourceAsStream("npc/en/EN.crf")));
 
-		SuffixArrayBuilder suffixArrayBuilder = new SuffixArrayBuilder(100);
+		SuffixArrayBuilder suffixArrayBuilder = new SuffixArrayBuilder(100, new LiteralHashing(4));
 		RDFLiteralSpotting entityRecognizer = new RDFLiteralSpotting();
 		pipeline.configure(languageClassification,
 				wordTokenizer, sentenceTokenizer, posTagger, nounPhraseChunker,

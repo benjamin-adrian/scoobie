@@ -31,6 +31,7 @@ import de.dfki.km.perspecting.obie.connection.KnowledgeBase;
 import de.dfki.km.perspecting.obie.model.Document;
 import de.dfki.km.perspecting.obie.model.Token;
 import de.dfki.km.perspecting.obie.model.TokenSequence;
+import de.dfki.km.perspecting.obie.transducer.model.LiteralHashing;
 import de.dfki.km.perspecting.obie.transducer.model.SuffixArray;
 import de.dfki.km.perspecting.obie.workflow.Transducer;
 
@@ -43,12 +44,15 @@ public class SuffixArrayBuilder extends Transducer {
 
 	private boolean filterNounPhrases = true;
 
+	private LiteralHashing hashing;
+
 	public void filterNounPhrases(boolean filterNounPhrases) {
 		this.filterNounPhrases = filterNounPhrases;
 	}
 
-	public SuffixArrayBuilder(int maxSuffixLength) {
+	public SuffixArrayBuilder(int maxSuffixLength, LiteralHashing hashing) {
 		this.maxSuffixLength = maxSuffixLength;
+		this.hashing = hashing;
 		log.info("Set maxSuffixLength to " + maxSuffixLength);
 	}
 
@@ -72,7 +76,7 @@ public class SuffixArrayBuilder extends Transducer {
 		Collections.sort(phrasedTokens);
 
 		long start = System.currentTimeMillis();
-		document.setSuffixArray(new SuffixArray(phrasedTokens, kb,
+		document.setSuffixArray(new SuffixArray(phrasedTokens, kb, hashing,
 				maxSuffixLength));
 		log.info("Time to build suffix array: "
 				+ (System.currentTimeMillis() - start));

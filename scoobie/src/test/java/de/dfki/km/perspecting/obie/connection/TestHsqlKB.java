@@ -11,6 +11,8 @@ import java.sql.Statement;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import de.dfki.km.perspecting.obie.transducer.model.LiteralHashing;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 public class TestHsqlKB {
@@ -67,7 +69,7 @@ public class TestHsqlKB {
 				PostgresKB.class.getResourceAsStream("test2.ttl") };
 
 		try {
-			kb.preprocessRdfData(datasets, MediaType.TURTLE, MediaType.TEXT, "http://scoobie.org");
+			kb.preprocessRdfData(datasets, MediaType.TURTLE, MediaType.TEXT, "http://scoobie.org", new LiteralHashing(4));
 			
 		} catch (Exception e) {
 			e.printStackTrace();

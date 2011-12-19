@@ -106,7 +106,7 @@ public class HsqlKB extends PostgresKB {
 	}
 
 	@Override
-	public ResultSetCursor dbSort(List<CharSequence> index, int maxLength)
+	public ResultSetCursor dbSort(List<String> index, int maxLength)
 			throws Exception {
 
 		String prefix = "SELECT * as string FROM ( VALUES ";
@@ -128,8 +128,7 @@ public class HsqlKB extends PostgresKB {
 
 			for (int i = 0; i < index.size(); i++) {
 				int min = Math.min(maxLength, index.get(i).length());
-				pstmt.setString(i + 1, (String) index.get(i)
-						.subSequence(0, min));
+				pstmt.setString(i + 1, index.get(i).substring(0, min));
 			}
 
 			ResultSet rs = executeQuery(pstmt, query);
@@ -160,13 +159,13 @@ public class HsqlKB extends PostgresKB {
 			reader.close();
 			in.close();
 			String sqlBatch = builder.toString();
-			
+
 			for (String sql : sqlBatch.split(";\n")) {
 				Statement s = connection.createStatement();
 				int batches = s.executeUpdate(sql);
 				s.close();
 			}
-			
+
 			log.info("Created indexes: " + connection.getCatalog());
 		} catch (SQLException e) {
 			log.log(Level.SEVERE, PostgresKB.class.getName(), e);

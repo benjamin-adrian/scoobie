@@ -79,6 +79,7 @@ import de.dfki.km.perspecting.obie.transducer.SentenceSegmenter;
 import de.dfki.km.perspecting.obie.transducer.SuffixArrayBuilder;
 import de.dfki.km.perspecting.obie.transducer.WordSegmenter;
 import de.dfki.km.perspecting.obie.transducer.model.CRFNounPhraseChunkerModel;
+import de.dfki.km.perspecting.obie.transducer.model.LiteralHashing;
 import de.dfki.km.perspecting.obie.transducer.model.disambiguation.AmbiguityResolver;
 import de.dfki.km.perspecting.obie.transducer.model.disambiguation.DegreeBasedResolver;
 import de.dfki.km.perspecting.obie.transducer.model.rating.AuthorityBasedRating;
@@ -154,7 +155,7 @@ public class RelevanceRatingExperiment {
 				new CRFNounPhraseChunkerModel($SCOOBIE_HOME
 						+ $DATABASE_DBPEDIA_en2 + "/npc/en/EN.crf"));
 
-		SuffixArrayBuilder suffixArrayBuilder = new SuffixArrayBuilder(100);
+		SuffixArrayBuilder suffixArrayBuilder = new SuffixArrayBuilder(100, new LiteralHashing(4));
 		RDFLiteralSpotting namedEntityRecognizer = new RDFLiteralSpotting();
 		InstanceRecognition instanceResolver = new InstanceRecognition();
 		EntityDisambiguation instanceDisambiguator = new EntityDisambiguation(

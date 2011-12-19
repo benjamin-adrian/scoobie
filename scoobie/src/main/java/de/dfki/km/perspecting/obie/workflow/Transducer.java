@@ -37,7 +37,7 @@ import de.dfki.km.perspecting.obie.model.Document;
  * 
  */
 public abstract class Transducer {
-
+// TODO make interface
 
 	/**
 	 * Interprets the content of a document by using formal and textual

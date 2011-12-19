@@ -35,6 +35,8 @@ import java.util.Set;
 
 import de.dfki.km.perspecting.obie.corpus.TextCorpus;
 import de.dfki.km.perspecting.obie.model.DoubleMatrix;
+import de.dfki.km.perspecting.obie.transducer.model.LiteralHashing;
+import de.dfki.km.perspecting.obie.transducer.model.SuffixArray;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 import de.dfki.km.perspecting.obie.workflow.Pipeline;
 
@@ -46,13 +48,6 @@ import de.dfki.km.perspecting.obie.workflow.Pipeline;
 public interface KnowledgeBase {
 
 	/**
-	 * Returns the current session token.
-	 * 
-	 * @return session token
-	 */
-	public String getSession();
-
-	/**
 	 * Returns a ResultSet filled with existing values of a datatype property.
 	 * 
 	 * @param datatypePropertyFilter
@@ -60,8 +55,7 @@ public interface KnowledgeBase {
 	 * @param prefixes
 	 *            List of hashed literal prefixes
 	 **/
-	RemoteCursor getDatatypePropertyValues(int[] datatypePropertyFilter,
-			int[] prefixes) throws Exception;
+	RemoteCursor getDatatypePropertyValues(int[] datatypePropertyFilter, SuffixArray suffixArray) throws Exception;
 
 	/**
 	 * 
@@ -123,44 +117,11 @@ public interface KnowledgeBase {
 	 */
 	String getLiteral(int index) throws Exception;
 
+	
 	/**
-	 * @param instance
-	 * @param relation
-	 * @return
-	 * @throws Exception
-	 */
-	int[] getOutgoingRelations(int instance, int relation) throws Exception;
-
-	/**
-	 * @param instance
-	 * @param relation
-	 * @return
-	 * @throws Exception
-	 */
-	int[] getIncomingRelations(int instance, int relation) throws Exception;
-
-	/**
-	 * @param instance
-	 * @return
-	 * @throws Exception
-	 */
-	Map<Integer, Set<Integer>> getOutgoingRelations(int instance)
-			throws Exception;
-
-	/**
-	 * @param instances
-	 * @return
-	 * @throws Exception
+	 * Returns outgoing edges for a given list of instances.
 	 */
 	RemoteCursor getOutgoingRelations(int[] instances) throws Exception;
-
-	/**
-	 * @param instance
-	 * @return
-	 * @throws Exception
-	 */
-	Map<Integer, Set<Integer>> getIncomingRelations(int instance)
-			throws Exception;
 
 	/**
 	 * @param types
@@ -170,44 +131,32 @@ public interface KnowledgeBase {
 	int getCluster(int[] types) throws Exception;
 
 	/**
-	 * @param instances
-	 * @return
-	 * @throws Exception
+	 * Returns incoming edges for a given list of instances.
 	 */
 	RemoteCursor getIncomingRelations(int[] instances) throws Exception;
 
 	/**
 	 * Returns the direct types for a given instance.
-	 * 
-	 * @param instanceIndex
-	 *            Index of instance
-	 * @return A {@link List} of {@link Integer} index values about types.
 	 */
 	RemoteCursor getRDFTypesForInstances(int[] subjects) throws Exception;
 
 	/**
-	 * @return
-	 * @throws Exception
+	 * Returns a list of contained RDF types.
+	 * 
 	 */
 	RemoteCursor getRDFTypes() throws Exception;
 
 	/**
-	 * @param index
-	 * @param maxLength
+	 * 
+	 * Sorts a list of literal values.
+	 * 
+	 * @param list
+	 * @param maxStringLength Maximal length of contained string.
 	 * @return
 	 * @throws Exception
 	 */
-	RemoteCursor dbSort(List<CharSequence> index, int maxLength)
+	RemoteCursor dbSort(List<String> list, int maxStringLength)
 			throws Exception;
-
-	/**
-	 * @param datatypePropertyIndex
-	 * @param rdfType
-	 * @return
-	 * @throws Exception
-	 */
-	RemoteCursor getDatatypePropertyValues(int datatypePropertyIndex,
-			int rdfType) throws Exception;
 
 	/**
 	 * @param type
@@ -248,7 +197,7 @@ public interface KnowledgeBase {
 	URI getUri();
 
 	void preprocessRdfData(InputStream[] datasets, MediaType rdfMimeType,
-			MediaType fileMimeType, String absoluteBaseURI) throws Exception;
+			MediaType fileMimeType, String absoluteBaseURI, LiteralHashing hashing) throws Exception;
 
 	void calculateCardinalities() throws Exception;
 

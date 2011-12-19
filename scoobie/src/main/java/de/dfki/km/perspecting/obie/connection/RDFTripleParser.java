@@ -32,6 +32,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -53,6 +54,7 @@ import org.openrdf.rio.RDFParser;
 import org.openrdf.rio.RDFParserFactory;
 import org.openrdf.rio.RDFParserRegistry;
 
+import de.dfki.km.perspecting.obie.transducer.model.LiteralHashing;
 import de.dfki.km.perspecting.obie.vocabulary.MediaType;
 
 public class RDFTripleParser {
@@ -72,6 +74,12 @@ public class RDFTripleParser {
 	private static final int URISIZE = 120;
 
 	final Object SEMAPHOR = new Object();
+
+	private final LiteralHashing hashing;
+
+	public RDFTripleParser(LiteralHashing hashing) {
+		this.hashing = hashing;
+	}
 
 	private static InputStream getStream(InputStream stream, MediaType mediatype)
 			throws Exception {
@@ -283,10 +291,8 @@ public class RDFTripleParser {
 						datatypePropertiesWriter.write(RDFTripleParser
 								.encloseCharacterString(literal));
 
-						// TODO: Code for hashing literals
 						datatypePropertiesWriter.append(',');
-						int max = Math.min(literal.length(), 4);
-						datatypePropertiesWriter.write(Integer.toString(literal.substring(0, max).hashCode()));
+						datatypePropertiesWriter.write(Integer.toString(hashing.hash(literal.toLowerCase(Locale.US))));
 
 						datatypePropertiesWriter.newLine();
 					}
