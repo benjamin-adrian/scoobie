@@ -43,7 +43,7 @@ The software and artefacts (such as examples, mappings, etc.) provided through t
 
 If you are interested in the functionalities provided by SCOOBIE, you should also have a look at:
 
-* [DBpedia Spotlight](http://dbpedia.org/spotlight)
+* [DBpedia Spotlight](https://www.dbpedia-spotlight.org/)
 * [Zemanta](http://www.zemanta.com/)
 * [GATE](http://gate.ac.uk)
 * [Natural Language Toolkit](http://www.nltk.org/)
